@@ -6,18 +6,7 @@ import omegaconf
 import torch
 import torchvision
 
-from src.data_process.feature import wav2mel, wav2mel_avhubert
-
-
-def get_upsample(cfg: omegaconf.DictConfig) -> int:
-    """
-    動画のfpsと音響特徴量のフレームあたりの秒数から対応関係を求める
-    """
-    n_mel_frames_per_sec = (
-        cfg["data"]["audio"]["sr"] // cfg["data"]["audio"]["hop_length"]
-    )
-    upsample = n_mel_frames_per_sec // cfg["data"]["video"]["fps"]
-    return upsample
+from src.data_process.feature import get_upsample, wav2mel, wav2mel_avhubert
 
 
 def load_data(

@@ -4,15 +4,26 @@ import omegaconf
 from python_speech_features import logfbank
 
 
-def log10(x: np.array, eps: float) -> np.array:
+def log10(x: np.ndarray, eps: float) -> np.ndarray:
     """
     epsでクリッピングした上で、常用対数をとる
     """
     return np.log10(np.maximum(x, eps))
 
 
+def get_upsample(cfg: omegaconf.DictConfig) -> int:
+    """
+    動画のfpsと音響特徴量のフレームあたりの秒数から対応関係を求める
+    """
+    n_mel_frames_per_sec = (
+        cfg["data"]["audio"]["sr"] // cfg["data"]["audio"]["hop_length"]
+    )
+    upsample = n_mel_frames_per_sec // cfg["data"]["video"]["fps"]
+    return upsample
+
+
 def wav2mel(
-    wav: np.array, cfg: omegaconf.DictConfig, ref_max: bool = False
+    wav: np.ndarray, cfg: omegaconf.DictConfig, ref_max: bool = False
 ) -> np.ndarray:
     """
     音声波形をメルスペクトログラムに変換
@@ -37,7 +48,7 @@ def wav2mel(
     return feature
 
 
-def wav2mel_avhubert(wav: np.array, cfg: omegaconf.DictConfig) -> np.array:
+def wav2mel_avhubert(wav: np.ndarray, cfg: omegaconf.DictConfig) -> np.ndarray:
     """
     音声波形をavhubertで用いられる音響特徴量に変換
     wav : (T,)

@@ -9,6 +9,11 @@ from src.pl_datamodule.base import BaseDataModule
 def main(cfg: omegaconf.DictConfig) -> None:
     datamodule = BaseDataModule(cfg)
     datamodule.setup("fit")
+    train_dataloader = datamodule.train_dataloader()
+    val_dataloader = datamodule.val_dataloader()
+    for batch in train_dataloader:
+        breakpoint()
+    
 
 
 if __name__ == "__main__":

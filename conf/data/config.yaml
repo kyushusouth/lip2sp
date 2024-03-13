@@ -20,5 +20,3 @@ video:
   lip_std: 0.165
   imsize: 96
   imsize_cropped: 88
-
-num_sample_ratio: 

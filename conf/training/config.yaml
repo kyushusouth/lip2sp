@@ -8,11 +8,4 @@ augs:
     use: true
   time_masking:
     use: true
-
-
-use_time_augment : False
-time_augment_rate : 20    # (100 - rate)から(100 + rate)の範囲で再生速度を変更
-
-use_segment_masking : True
-which_seg_mask : "seg_mean"
-max_segment_masking_sec : 0.5
+    max_masking_sec: 0.5

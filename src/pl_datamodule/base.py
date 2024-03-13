@@ -6,14 +6,14 @@ import pandas as pd
 from torch.utils.data import DataLoader
 
 from src.dataset.base import BaseDataset
+from src.transform.base import BaseTransform
 
 
 class BaseDataModule(L.LightningDataModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.transform = None
-        self.batch_size = None
+        self.batch_size = cfg["training"]["batch_size"]
 
     def get_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
@@ -42,9 +42,7 @@ class BaseDataModule(L.LightningDataModule):
         データセット定義
         """
         df = pd.read_csv(str(Path(self.cfg["path"]["kablab"]["df_path"]).expanduser()))
-        df = df.loc[
-            df["speaker"].isin(self.cfg["data_choice"]["kablab"]["speaker"])
-        ]
+        df = df.loc[df["speaker"].isin(self.cfg["data_choice"]["kablab"]["speaker"])]
         df = df.loc[df["corpus"].isin(self.cfg["data_choice"]["kablab"]["corpus"])]
 
         if stage == "fit":
@@ -53,38 +51,38 @@ class BaseDataModule(L.LightningDataModule):
             self.train_dataset = BaseDataset(
                 cfg=self.cfg,
                 data_path_list=train_data_path_list,
-                transform=self.transform,
+                transform=BaseTransform(self.cfg, "train"),
             )
             self.val_dataset = BaseDataset(
                 cfg=self.cfg,
                 data_path_list=val_data_path_list,
-                transform=self.transform,
+                transform=BaseTransform(self.cfg, "val"),
             )
         if stage == "test":
             test_data_path_list = self.get_path_list(df, "test")
             self.test_dataset = BaseDataset(
                 cfg=self.cfg,
                 data_path_list=test_data_path_list,
-                transform=self.transform,
+                transform=BaseTransform(self.cfg, "test"),
             )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.train_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg['training']['num_workers'],
+            num_workers=self.cfg["training"]["num_workers"],
         )
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg['training']['num_workers'],
+            num_workers=self.cfg["training"]["num_workers"],
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.test_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg['training']['num_workers'],
+            num_workers=self.cfg["training"]["num_workers"],
         )
