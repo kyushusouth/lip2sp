@@ -1,0 +1,16 @@
+in_channels: 1
+out_channels: 1
+gen_inner_channels: 64
+cond_channels: 80
+upsample_scales: [10, 4, 2, 2]
+gen_n_layers: 30
+gen_n_stacks: 3
+disc_inner_channels: 64
+disc_n_layers: 10
+disc_n_layers_wavenet: 30
+disc_n_stacks: 3
+kernel_size: 3
+gen_dropout: 0.1
+disc_dropout: 0
+use_weight_norm: False
+which_disc: "normal"

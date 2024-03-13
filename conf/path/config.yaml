@@ -1,0 +1,9 @@
+kablab:
+  audio_dir: '~/dataset/lip/wav'
+  video_dir: '~/dataset/lip/avhubert_preprocess_fps25'
+  df_path: '~/dataset/lip/data_split_csv/kablab.csv'
+  emb_dir: '~/dataset/lip/emb'
+  text_dir: '~/dataset/lip/utt'
+
+vctk:
+  stat_path: '~/dataset/lip/stat/vctk.npz'

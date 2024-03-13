@@ -82,6 +82,11 @@ hydra-colorlog = "^1.2.0"
 ipykernel = "^6.29.3"
 timm = "^0.9.16"
 cosine-annealing-warmup = { git = "https://github.com/katsura-jp/pytorch-cosine-annealing-with-warmup" }
+pandas = "^2.2.1"
+matplotlib = "^3.8.3"
+seaborn = "^0.13.2"
+librosa = "^0.10.1"
+python-speech-features = "^0.6"
 
 
 [build-system]

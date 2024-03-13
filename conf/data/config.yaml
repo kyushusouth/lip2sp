@@ -1,0 +1,24 @@
+audio:
+  sr: 16000
+  n_fft: 512
+  hop_length: 160
+  # hop_length_sec: 0.01
+  win_length: 400
+  # win_length_sec: 0.025
+  f_min: 0
+  f_max: 8000
+  # n_mel_channels: 80
+  n_mels: 80
+  mcep_order: 25
+  avhubert_nfilt: 26
+  avhubert_preemph: 0.97
+  eps: 1.0e-6
+
+video:
+  fps: 25
+  lip_mean: 0.421
+  lip_std: 0.165
+  imsize: 96
+  imsize_cropped: 88
+
+num_sample_ratio: 

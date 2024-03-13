@@ -1,1 +1,15 @@
-name: test
+defaults:
+  - data: config
+  - model: config
+  - path: config
+  - data_choice: config
+  - training: config
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+
+hydra:
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}

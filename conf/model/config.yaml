@@ -1,0 +1,6 @@
+defaults:
+  - avhubert: base
+  - raven: base
+  - vatlm: base
+  - pwg: base
+  - decoder: base
