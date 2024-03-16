@@ -1,6 +1,10 @@
+import pathlib
+
 import lightning as L
+import numpy as np
 import torch
 from cosine_annealing_warmup import CosineAnnealingWarmupRestarts
+from scipy.io.wavfile import write
 
 from src.loss_fn.base import LossFunctions
 from src.model.base import BaseModel
@@ -10,9 +14,9 @@ class LitBaseModel(L.LightningModule):
     def __init__(self, cfg) -> None:
         super().__init__()
         self.cfg = cfg
-        self.model = BaseModel(cfg)
         self.learning_rate = cfg["training"]["optimizer"]["learning_rate"]
         self.automatic_optimization = True
+        self.model = BaseModel(cfg)
         self.loss_fn = LossFunctions()
 
     def forward(
@@ -49,10 +53,10 @@ class LitBaseModel(L.LightningModule):
             spk_emb=spk_emb,
         )
         loss = self.loss_fn.mae_loss(pred, feature, feature_len, max_len=pred.shape[-1])
-        return loss
+        return pred, loss
 
     def training_step(self, batch: list, batch_index: int):
-        loss = self.step_typical_process(batch)
+        pred, loss = self.step_typical_process(batch)
         self.log(
             "train_loss",
             loss,
@@ -62,7 +66,7 @@ class LitBaseModel(L.LightningModule):
         return loss
 
     def validation_step(self, batch: list, batch_index: int):
-        loss = self.step_typical_process(batch)
+        pred, loss = self.step_typical_process(batch)
         self.log(
             "val_loss",
             loss,
@@ -70,28 +74,40 @@ class LitBaseModel(L.LightningModule):
             batch_size=self.cfg["training"]["params"]["batch_size"],
         )
 
-    def test_step(self, batch: list, batch_index: int):
-        loss = self.step_typical_process(batch)
+    # def test_step(self, batch: list, batch_index: int):
+    #     (
+    #         wav,
+    #         lip,
+    #         feature,
+    #         feature_avhubert,
+    #         spk_emb,
+    #         feature_len,
+    #         lip_len,
+    #         speaker,
+    #         filename,
+    #     ) = batch
+    #     pred = self.forward(
+    #         lip=lip,
+    #         audio=None,
+    #         lip_len=lip_len,
+    #         spk_emb=spk_emb,
+    #     )
+    #     noise = torch.randn(
+    #         pred.shape[0], 1, pred.shape[-1] * self.cfg["data"]["audio"]["hop_length"]
+    #     ).to(device=pred.device, dtype=pred.dtype)
+    #     wav_pred = self.pwg(noise, pred)
+    #     wav_abs = self.pwg(noise, feature)
+    #     n_sample_min = min(wav.shape[-1], wav_pred.shape[-1], wav_abs.shape[-1])
 
-    def predict_step(self, batch: list, batch_index: int):
-        (
-            wav,
-            lip,
-            feature,
-            feature_avhubert,
-            spk_emb,
-            feature_len,
-            lip_len,
-            speaker,
-            filename,
-        ) = batch
-        pred = self.forward(
-            lip=lip,
-            audio=None,
-            lip_len=lip_len,
-            spk_emb=spk_emb,
-        )
-        return pred
+    # def save_wav(
+    #     self, wav: torch.Tensor, n_sample: int, save_path: pathlib.Path | str
+    # ) -> None:
+    #     wav = wav.squeeze(0).squeeze(0)
+    #     wav = wav.cpu().detach().numpy()
+    #     wav /= np.max(np.abs(wav))
+    #     wav = wav.astype(np.float32)
+    #     wav = wav[:n_sample]
+    #     write(str(save_path), rate=self.cfg["data"]["audio"]["sr"], data=wav)
 
     def configure_optimizers(self):
         optimizer = None
