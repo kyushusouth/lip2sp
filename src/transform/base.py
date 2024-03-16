@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torchvision import transforms as T
 
-from src.data_process.feature import get_upsample
+from src.data_process.utils import get_upsample
 
 
 class BaseTransform:
@@ -143,7 +143,7 @@ class BaseTransform:
         lip_std: torch.Tensor,
         feat_mean: torch.Tensor,
         feat_std: torch.Tensor,
-    ):
+    ) -> tuple:
         """
         lip : (C, H, W, T)
         feature : (T, C)

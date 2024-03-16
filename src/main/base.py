@@ -12,8 +12,26 @@ def main(cfg: omegaconf.DictConfig) -> None:
     train_dataloader = datamodule.train_dataloader()
     val_dataloader = datamodule.val_dataloader()
     for batch in train_dataloader:
-        breakpoint()
-    
+        (
+            wav,
+            lip,
+            feature,
+            feature_avhubert,
+            spk_emb,
+            feature_len,
+            lip_len,
+            speaker,
+            filename,
+        ) = batch
+        print(wav.shape)
+        print(lip.shape)
+        print(feature.shape)
+        print(feature_avhubert.shape)
+        print(spk_emb.shape)
+        print(feature_len)
+        print(lip_len)
+        print(speaker)
+        print(filename)
 
 
 if __name__ == "__main__":

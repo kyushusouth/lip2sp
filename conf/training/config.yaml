@@ -1,5 +1,5 @@
 batch_size: 8
-num_workers: 8
+num_workers: 1
 
 augs:
   random_crop:
@@ -9,3 +9,5 @@ augs:
   time_masking:
     use: true
     max_masking_sec: 0.5
+
+input_sec: 10

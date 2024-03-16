@@ -6,7 +6,7 @@ import omegaconf
 import torch
 import torchvision
 
-from src.data_process.feature import get_upsample, wav2mel, wav2mel_avhubert
+from src.data_process.utils import get_upsample, wav2mel, wav2mel_avhubert
 
 
 def load_data(

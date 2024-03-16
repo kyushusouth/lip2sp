@@ -1,0 +1,75 @@
+data:
+  audio:
+    sr: 16000
+    n_fft: 512
+    hop_length: 160
+    win_length: 400
+    f_min: 0
+    f_max: 8000
+    n_mels: 80
+    mcep_order: 25
+    avhubert_nfilt: 26
+    avhubert_preemph: 0.97
+    eps: 1.0e-06
+  video:
+    fps: 25
+    lip_mean: 0.421
+    lip_std: 0.165
+    imsize: 96
+    imsize_cropped: 88
+model:
+  avhubert: {}
+  raven: {}
+  vatlm: {}
+  pwg:
+    in_channels: 1
+    out_channels: 1
+    gen_inner_channels: 64
+    cond_channels: 80
+    upsample_scales:
+    - 10
+    - 4
+    - 2
+    - 2
+    gen_n_layers: 30
+    gen_n_stacks: 3
+    disc_inner_channels: 64
+    disc_n_layers: 10
+    disc_n_layers_wavenet: 30
+    disc_n_stacks: 3
+    kernel_size: 3
+    gen_dropout: 0.1
+    disc_dropout: 0
+    use_weight_norm: false
+    which_disc: normal
+  decoder:
+    n_conv_layers: 2
+    conv_kernel_size: 3
+    dropout: 0.1
+path:
+  kablab:
+    audio_dir: ~/dataset/lip/wav
+    video_dir: ~/dataset/lip/avhubert_preprocess_fps25
+    df_path: ~/dataset/lip/data_split_csv/kablab.csv
+    emb_dir: ~/dataset/lip/emb
+    text_dir: ~/dataset/lip/utt
+  vctk:
+    stat_path: ~/dataset/lip/stat/vctk.npz
+data_choice:
+  kablab:
+    speaker:
+    - F01_kablab
+    - M01_kablab
+    corpus:
+    - ATR
+training:
+  batch_size: 1
+  num_workers: 1
+  augs:
+    random_crop:
+      use: true
+    horizontal_flip:
+      use: true
+    time_masking:
+      use: true
+      max_masking_sec: 0.5

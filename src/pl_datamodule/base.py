@@ -1,3 +1,4 @@
+import functools
 from pathlib import Path
 
 import lightning as L
@@ -5,6 +6,7 @@ import omegaconf
 import pandas as pd
 from torch.utils.data import DataLoader
 
+from src.collate_fn.base import adjust_seq_lengths
 from src.dataset.base import BaseDataset
 from src.transform.base import BaseTransform
 
@@ -71,6 +73,10 @@ class BaseDataModule(L.LightningDataModule):
             dataset=self.train_dataset,
             batch_size=self.batch_size,
             num_workers=self.cfg["training"]["num_workers"],
+            shuffle=True,
+            pin_memory=True,
+            drop_last=True,
+            collate_fn=functools.partial(adjust_seq_lengths, cfg=self.cfg),
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -78,11 +84,19 @@ class BaseDataModule(L.LightningDataModule):
             dataset=self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.cfg["training"]["num_workers"],
+            shuffle=True,
+            pin_memory=True,
+            drop_last=True,
+            collate_fn=functools.partial(adjust_seq_lengths, cfg=self.cfg),
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.test_dataset,
-            batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["num_workers"],
+            batch_size=1,
+            num_workers=0,
+            shuffle=False,
+            pin_memory=True,
+            drop_last=False,
+            collate_fn=None,
         )
