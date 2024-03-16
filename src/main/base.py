@@ -6,7 +6,7 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from src import start  # noqa: F401
+from src.main import start  # noqa: F401
 from src.pl_datamodule.base import BaseDataModule
 from src.pl_module.base import LitBaseModel
 
