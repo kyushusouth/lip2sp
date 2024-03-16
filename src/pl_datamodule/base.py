@@ -15,7 +15,7 @@ class BaseDataModule(L.LightningDataModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.batch_size = cfg["training"]["batch_size"]
+        self.batch_size = cfg["training"]["params"]["batch_size"]
 
     def get_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
@@ -39,10 +39,6 @@ class BaseDataModule(L.LightningDataModule):
         return data_path_list
 
     def setup(self, stage: str) -> None:
-        """
-        データのパス取得
-        データセット定義
-        """
         df = pd.read_csv(str(Path(self.cfg["path"]["kablab"]["df_path"]).expanduser()))
         df = df.loc[df["speaker"].isin(self.cfg["data_choice"]["kablab"]["speaker"])]
         df = df.loc[df["corpus"].isin(self.cfg["data_choice"]["kablab"]["corpus"])]
@@ -72,10 +68,10 @@ class BaseDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.train_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["num_workers"],
+            num_workers=self.cfg["training"]["params"]["num_workers"],
             shuffle=True,
             pin_memory=True,
-            drop_last=True,
+            drop_last=False,
             collate_fn=functools.partial(adjust_seq_lengths, cfg=self.cfg),
         )
 
@@ -83,10 +79,10 @@ class BaseDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["num_workers"],
-            shuffle=True,
+            num_workers=self.cfg["training"]["params"]["num_workers"],
+            shuffle=False,
             pin_memory=True,
-            drop_last=True,
+            drop_last=False,
             collate_fn=functools.partial(adjust_seq_lengths, cfg=self.cfg),
         )
 

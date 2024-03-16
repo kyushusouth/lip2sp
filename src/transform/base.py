@@ -90,7 +90,9 @@ class BaseTransform:
             0,
             int(
                 self.cfg["data"]["video"]["fps"]
-                * self.cfg["training"]["augs"]["time_masking"]["max_masking_sec"]
+                * self.cfg["training"]["params"]["augs"]["time_masking"][
+                    "max_masking_sec"
+                ]
             ),
             (1,),
         )
@@ -155,15 +157,15 @@ class BaseTransform:
 
         if self.train_val_test == "train":
             if lip.shape[-1] != self.cfg["data"]["video"]["imsize_cropped"]:
-                if self.cfg["training"]["augs"]["random_crop"]["use"]:
+                if self.cfg["training"]["params"]["augs"]["random_crop"]["use"]:
                     lip = self.random_crop(lip, center=False)
                 else:
                     lip = self.random_crop(lip, center=True)
-                if self.cfg["training"]["augs"]["horizontal_flip"]["use"]:
+                if self.cfg["training"]["params"]["augs"]["horizontal_flip"]["use"]:
                     lip = self.horizontal_flip(lip)
             lip = lip.permute(1, 2, 3, 0)  # (C, H, W, T)
 
-            if self.cfg["training"]["augs"]["time_masking"]["use"]:
+            if self.cfg["training"]["params"]["augs"]["time_masking"]["use"]:
                 lip = self.segment_masking_segmean(lip)
         else:
             if lip.shape[-1] != self.cfg["data"]["video"]["imsize_cropped"]:

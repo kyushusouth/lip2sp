@@ -1,7 +1,0 @@
-data:
-  video:
-    name: video
-  audio:
-    name: audio
-model: {}
-path: {}

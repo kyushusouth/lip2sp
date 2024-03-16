@@ -1,13 +1,4 @@
-batch_size: 8
-num_workers: 1
-
-augs:
-  random_crop:
-    use: true
-  horizontal_flip:
-    use: true
-  time_masking:
-    use: true
-    max_masking_sec: 0.5
-
-input_sec: 10
+defaults:
+  - optimizer: adamw
+  - scheduler: cawr
+  - params: dev

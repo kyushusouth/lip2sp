@@ -3,4 +3,9 @@ defaults:
   - raven: base
   - vatlm: base
   - pwg: base
-  - decoder: base
+  - decoder: conv
+
+ssl_type: avhubert
+ssl_feature_dropout: 0
+use_spk_emb: true
+spk_emb_dim: 256
