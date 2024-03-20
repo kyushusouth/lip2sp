@@ -1,0 +1,14 @@
+program: ../src/main/base.py
+project: pytorch-lightning-test-base-sweep
+name: test-1
+method: grid
+parameters:
+  model.ssl_type:
+    values: ['avhubert', 'raven', 'vatlm']
+metric:
+  name: val_loss
+  goal: minimize
+command:
+  - python
+  - ${program}
+  - ${args_no_hyphens}
