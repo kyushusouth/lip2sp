@@ -1,14 +1,13 @@
 defaults:
-  - optimizer: adamw
-  - scheduler: cawr
-  - params: base
+  - optimizer: adam
+  - scheduler: exp
+  - params: pwg
 
 params:
-  max_epoch: 5
-  early_stopping_patience: 2
+  # max_epoch: 5
+  # early_stopping_patience: 2
   limit_train_batches: 0.2
   limit_val_batches: 0.2
   limit_test_batches: 0.2
-  accumulate_grad_batches: 4
   wandb:
-    project_name: "lip2sp-pytorch-lightning-base"
+    project_name: "debug"
