@@ -73,6 +73,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
         gradient_clip_val=cfg["training"]["params"]["gradient_clip_val"],
         gradient_clip_algorithm=cfg["training"]["params"]["gradient_clip_algorithm"],
         num_sanity_val_steps=0,
+        deterministic=True,
     )
     
     trainer.fit(model=model, datamodule=datamodule)

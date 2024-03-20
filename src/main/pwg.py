@@ -70,6 +70,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
         log_every_n_steps=cfg["training"]["params"]["log_every_n_steps"],
         precision=cfg["training"]["params"]["precision"],
         num_sanity_val_steps=0,
+        deterministic=True,
     )
 
     trainer.fit(model=model, datamodule=datamodule)
