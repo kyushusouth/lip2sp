@@ -59,7 +59,6 @@ class LitPWG(L.LightningModule):
 
     def training_step(self, batch: list, batch_index: int) -> None:
         opt_g, opt_d = self.optimizers()
-        sch1, sch2 = self.lr_schedulers()
 
         (
             wav,
@@ -206,6 +205,10 @@ class LitPWG(L.LightningModule):
         )
 
     def on_validation_epoch_end(self) -> None:
+        sch_g, sch_d = self.lr_schedulers()
+        sch_g.step()
+        sch_d.step()
+        
         self.train_epoch_loss_disc_list.append(np.mean(self.train_step_loss_disc_list))
         self.train_epoch_loss_gen_stft_list.append(
             np.mean(self.train_step_loss_gen_stft_list)
