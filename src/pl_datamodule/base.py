@@ -17,7 +17,7 @@ class BaseDataModule(L.LightningDataModule):
         self.cfg = cfg
         self.batch_size = cfg["training"]["params"]["batch_size"]
 
-    def get_path_list(self, df: pd.DataFrame, data_split: str) -> list:
+    def get_kablab_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
         audio_dir = Path(self.cfg["path"]["kablab"]["audio_dir"]).expanduser()
         video_dir = Path(self.cfg["path"]["kablab"]["video_dir"]).expanduser()
@@ -38,14 +38,76 @@ class BaseDataModule(L.LightningDataModule):
             )
         return data_path_list
 
+    def get_hifi_captain_path_list(self, df: pd.DataFrame, data_split: str) -> list:
+        df = df.loc[df["data_split"] == data_split]
+        audio_dir = Path(self.cfg["path"]["hifi_captain"]["data_dir"]).expanduser()
+        data_path_list = []
+        for i in range(df.shape[0]):
+            row = df.iloc[i]
+            data_path_list.append(
+                {
+                    "audio_path": audio_dir
+                    / row["speaker"]
+                    / "wav"
+                    / row["parent_dir"]
+                    / f'{row["filename"]}.wav',
+                    "video_path": None,
+                    "speaker": row["speaker"],
+                    "filename": row["filename"],
+                }
+            )
+        return data_path_list
+
+    def get_jvs_path_list(self, df: pd.DataFrame, data_split: str) -> list:
+        df = df.loc[df["data_split"] == data_split]
+        audio_dir = Path(self.cfg["path"]["jvs"]["data_dir"]).expanduser()
+        data_path_list = []
+        for i in range(df.shape[0]):
+            row = df.iloc[i]
+            data_path_list.append(
+                {
+                    "audio_path": audio_dir
+                    / row["speaker"]
+                    / row["data"]
+                    / "wav24kHz16bit"
+                    / f'{row["filename"]}.wav',
+                    "video_path": None,
+                    "speaker": row["speaker"],
+                    "filename": row["filename"],
+                }
+            )
+        return data_path_list
+
     def setup(self, stage: str) -> None:
-        df = pd.read_csv(str(Path(self.cfg["path"]["kablab"]["df_path"]).expanduser()))
-        df = df.loc[df["speaker"].isin(self.cfg["data_choice"]["kablab"]["speaker"])]
-        df = df.loc[df["corpus"].isin(self.cfg["data_choice"]["kablab"]["corpus"])]
+        train_data_path_list = []
+        val_data_path_list = []
+        test_data_path_list = []
+        if self.cfg["data_choice"]["kablab"]["use"]:
+            df = pd.read_csv(
+                str(Path(self.cfg["path"]["kablab"]["df_path"]).expanduser())
+            )
+            df = df.loc[
+                df["speaker"].isin(self.cfg["data_choice"]["kablab"]["speaker"])
+            ]
+            df = df.loc[df["corpus"].isin(self.cfg["data_choice"]["kablab"]["corpus"])]
+            train_data_path_list += self.get_kablab_path_list(df, "train")
+            val_data_path_list += self.get_kablab_path_list(df, "val")
+            test_data_path_list += self.get_kablab_path_list(df, "test")
+        if self.cfg["data_choice"]["hifi_captain"]["use"]:
+            df = pd.read_csv(
+                str(Path(self.cfg["path"]["hifi_captain"]["df_path"]).expanduser())
+            )
+            train_data_path_list += self.get_hifi_captain_path_list(df, "train")
+            val_data_path_list += self.get_hifi_captain_path_list(df, "val")
+            test_data_path_list += self.get_hifi_captain_path_list(df, "test")
+        if self.cfg["data_choice"]["jvs"]["use"]:
+            df = pd.read_csv(str(Path(self.cfg["path"]["jvs"]["df_path"]).expanduser()))
+            df = df.loc[(df["data"] == "parallel100") | (df["data"] == "nonpara30")]
+            train_data_path_list += self.get_jvs_path_list(df, "train")
+            val_data_path_list += self.get_jvs_path_list(df, "val")
+            test_data_path_list += self.get_jvs_path_list(df, "test")
 
         if stage == "fit":
-            train_data_path_list = self.get_path_list(df, "train")
-            val_data_path_list = self.get_path_list(df, "val")
             self.train_dataset = BaseDataset(
                 cfg=self.cfg,
                 data_path_list=train_data_path_list,
@@ -57,7 +119,6 @@ class BaseDataModule(L.LightningDataModule):
                 transform=BaseTransform(self.cfg, "val"),
             )
         if stage == "test":
-            test_data_path_list = self.get_path_list(df, "test")
             self.test_dataset = BaseDataset(
                 cfg=self.cfg,
                 data_path_list=test_data_path_list,
