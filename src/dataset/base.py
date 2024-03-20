@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 
 from src.data_process.transform import load_data
-from src.dataset.utils import get_spk_emb
+from src.dataset.utils import get_spk_emb, get_spk_emb_hifi_captain, get_spk_emb_jvs
 from src.transform.base import BaseTransform
 
 
@@ -23,6 +23,8 @@ class BaseDataset(Dataset):
         self.data_path_list = data_path_list
         self.transform = transform
         self.embs = get_spk_emb(cfg)
+        self.embs.update(get_spk_emb_jvs(cfg))
+        self.embs.update(get_spk_emb_hifi_captain(cfg))
         self.lip_mean = torch.from_numpy(np.array([cfg["data"]["video"]["lip_mean"]]))
         self.lip_std = torch.from_numpy(np.array([cfg["data"]["video"]["lip_std"]]))
         feat_mean_var_std = np.load(
