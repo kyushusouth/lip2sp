@@ -1,9 +1,22 @@
 kablab:
-  audio_dir: '~/dataset/lip/wav'
-  video_dir: '~/dataset/lip/avhubert_preprocess_fps25'
-  df_path: '~/dataset/lip/data_split_csv/kablab.csv'
-  emb_dir: '~/dataset/lip/emb'
-  text_dir: '~/dataset/lip/utt'
+  audio_dir: "~/dataset/lip/wav"
+  video_dir: "~/dataset/lip/avhubert_preprocess_fps25"
+  df_path: "~/dataset/lip/data_split_csv/kablab.csv"
+  emb_dir: "~/dataset/lip/emb"
+  text_dir: "~/dataset/lip/utt"
+
+jvs:
+  data_dir: "~/dataset/jvs_ver1"
+  df_path: "~/dataset/lip/data_split_csv/jvs.csv"
+  path_train: "~/dataset/lip/np_files/jvs/train"
+  emb_dir: "~/dataset/jvs_ver1/emb"
+  stat_path: "~/dataset/lip/stat/jvs.npz"
+
+hifi_captain:
+  data_dir: "~/dataset/hi-fi-captain/ja-JP"
+  df_path: "~/dataset/lip/data_split_csv/hifi_captain.csv"
+  emb_dir: "~/dataset/hi-fi-captain/ja-JP"
+  stat_path: "~/dataset/lip/stat/hi-fi-captain.npz"
 
 vctk:
-  stat_path: '~/dataset/lip/stat/vctk.npz'
+  stat_path: "~/dataset/lip/stat/vctk.npz"

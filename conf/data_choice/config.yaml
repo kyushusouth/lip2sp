@@ -1,3 +1,10 @@
 kablab:
-  speaker : ['F01_kablab', 'M01_kablab']
-  corpus : ["ATR"]
+  use: false
+  speaker: ["F01_kablab", "M01_kablab"]
+  corpus: ["ATR"]
+
+jvs:
+  use: false
+
+hifi_captain:
+  use: true
