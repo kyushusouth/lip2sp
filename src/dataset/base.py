@@ -63,6 +63,12 @@ class BaseDataset(Dataset):
         feature_len = torch.tensor(feature.shape[-1])
         lip_len = torch.tensor(lip.shape[-1])
 
+        wav = wav.to(torch.float32)
+        lip = lip.to(torch.float32)
+        feature = feature.to(torch.float32)
+        feature_avhubert = feature_avhubert.to(torch.float32)
+        spk_emb = spk_emb.to(torch.float32)
+
         return (
             wav,
             lip,
