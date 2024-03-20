@@ -71,3 +71,34 @@ def save_wav(
     wandb.log(
         {f"{filename}_pred": wandb.Audio(pred, sample_rate=cfg["data"]["audio"]["sr"])}
     )
+
+
+def save_wav_table(
+    cfg: omegaconf.DictConfig,
+    gt_train: np.ndarray,
+    pred_train: np.ndarray,
+    gt_val: np.ndarray,
+    pred_val: np.ndarray,
+    tablename: str,
+) -> None:
+    gt_train /= np.max(np.abs(gt_train))
+    pred_train /= np.max(np.abs(pred_train))
+    gt_val /= np.max(np.abs(gt_val))
+    pred_val /= np.max(np.abs(pred_val))
+
+    table = wandb.Table(
+        columns=["kind", "gt", "pred"],
+        data=[
+            [
+                "train",
+                wandb.Audio(gt_train, sample_rate=cfg["data"]["audio"]["sr"]),
+                wandb.Audio(pred_train, sample_rate=cfg["data"]["audio"]["sr"]),
+            ],
+            [
+                "val",
+                wandb.Audio(gt_val, sample_rate=cfg["data"]["audio"]["sr"]),
+                wandb.Audio(pred_val, sample_rate=cfg["data"]["audio"]["sr"]),
+            ],
+        ],
+    )
+    wandb.log({tablename: table})

@@ -8,12 +8,13 @@ import pandas as pd
 import torch
 import wandb
 import whisper
+from jiwer import wer
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
 
 from src.data_process.utils import wav2mel
 from src.log_fn.save_loss import save_epoch_loss_plot
-from src.log_fn.save_sample import save_mel, save_wav
+from src.log_fn.save_sample import save_mel, save_wav_table
 from src.loss_fn.stft_loss import MultiResolutionSTFTLoss
 from src.model.pwg import Discriminator, Generator
 
@@ -26,7 +27,6 @@ class LitPWG(L.LightningModule):
         self.automatic_optimization = False
         self.generator = Generator(cfg)
         self.discriminator = Discriminator(cfg)
-
         self.loss_fn = MultiResolutionSTFTLoss(
             n_fft_list=cfg["training"]["params"]["n_fft_list"],
             hop_length_list=cfg["training"]["params"]["hop_length_list"],
@@ -253,17 +253,13 @@ class LitPWG(L.LightningModule):
             val_loss_list=self.val_epoch_loss_gen_all_list,
         )
 
-        save_wav(
+        save_wav_table(
             cfg=self.cfg,
-            gt=self.train_wav_example["gt"],
-            pred=self.train_wav_example["pred"],
-            filename="train",
-        )
-        save_wav(
-            cfg=self.cfg,
-            gt=self.val_wav_example["gt"],
-            pred=self.val_wav_example["pred"],
-            filename="val",
+            gt_train=self.train_wav_example["gt"],
+            pred_train=self.train_wav_example["pred"],
+            gt_val=self.val_wav_example["gt"],
+            pred_val=self.val_wav_example["pred"],
+            tablename="wav examples",
         )
 
         save_mel(
