@@ -53,6 +53,10 @@ class LitPWG(L.LightningModule):
         self.train_wav_example = {"gt": None, "pred": None}
         self.val_wav_example = {"gt": None, "pred": None}
 
+    def forward(self, noise: torch.Tensor, feature: torch.Tensor) -> torch.Tensor:
+        wav_pred = self.generator(noise, feature)
+        return wav_pred
+
     def training_step(self, batch: list, batch_index: int) -> None:
         opt_g, opt_d = self.optimizers()
         sch1, sch2 = self.lr_schedulers()

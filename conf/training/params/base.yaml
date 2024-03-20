@@ -17,6 +17,9 @@ accumulate_grad_batches: 2
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
 checkpoints_save_dir: "~/lip2sp/checkpoints"
+n_fft_list : [320, 640, 1280]
+hop_length_list : [80, 160, 320]
+win_length_list : [320, 640, 1280]
 wandb:
   project_name: "lip2sp-pytorch-lightning-prod"
   default_root_dir: "./"

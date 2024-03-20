@@ -10,7 +10,6 @@ from pytorch_lightning.loggers import WandbLogger
 
 from src.main import start  # noqa: F401
 from src.pl_datamodule.base import BaseDataModule
-from src.pl_module.base import LitBaseModel
 from src.pl_module.pwg import LitPWG
 
 
@@ -36,7 +35,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
         name=cfg["training"]["params"]["wandb"]["run_name"],
         group=cfg["training"]["params"]["wandb"]["group_name"],
     )
-    
+
     wandb_logger.watch(model, log="all", log_graph=True, log_freq=10)
 
     trainer = L.Trainer(
@@ -70,20 +69,17 @@ def main(cfg: omegaconf.DictConfig) -> None:
         strategy="auto",
         log_every_n_steps=cfg["training"]["params"]["log_every_n_steps"],
         precision=cfg["training"]["params"]["precision"],
-        # accumulate_grad_batches=cfg["training"]["params"]["accumulate_grad_batches"],
-        # gradient_clip_val=cfg["training"]["params"]["gradient_clip_val"],
-        # gradient_clip_algorithm=cfg["training"]["params"]["gradient_clip_algorithm"],
         num_sanity_val_steps=0,
     )
-    
+
     trainer.fit(model=model, datamodule=datamodule)
-    
+
     trainer.test(
         model=model,
         datamodule=datamodule,
         ckpt_path="best",
     )
-    
+
     wandb.finish()
 
 

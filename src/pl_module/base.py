@@ -17,7 +17,7 @@ from src.log_fn.save_loss import save_epoch_loss_plot
 from src.log_fn.save_sample import save_mel
 from src.loss_fn.base import LossFunctions
 from src.model.base import BaseModel
-from src.model.pwg import Generator
+from src.pl_module.pwg import LitPWG
 
 
 class LitBaseModel(L.LightningModule):
@@ -28,16 +28,17 @@ class LitBaseModel(L.LightningModule):
         self.automatic_optimization = True
         self.model = BaseModel(cfg)
         self.loss_fn = LossFunctions()
+        
         self.train_step_loss_list = []
         self.train_epoch_loss_list = []
         self.val_step_loss_list = []
         self.val_epoch_loss_list = []
         self.train_mel_example = {"gt": None, "pred": None}
         self.val_mel_example = {"gt": None, "pred": None}
-        self.pwg = Generator(self.cfg)
-        pretrained_dict = torch.load(self.cfg["model"]["pwg"]["model_path"])
-        self.pwg.load_state_dict(pretrained_dict["gen"], strict=True)
-
+        
+        self.pwg = LitPWG.load_from_checkpoint(self.cfg["model"]["pwg"]["model_path"], cfg=cfg)
+        self.pwg.eval()
+        
     def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
         (
             wav,
@@ -140,10 +141,10 @@ class LitBaseModel(L.LightningModule):
             lip_len=lip_len,
             spk_emb=spk_emb,
         )
+        
         noise = torch.randn(
             pred.shape[0], 1, pred.shape[-1] * self.cfg["data"]["audio"]["hop_length"]
         ).to(device=pred.device, dtype=pred.dtype)
-
         wav_pred = self.pwg(noise, pred)
         wav_abs = self.pwg(noise, feature)
         

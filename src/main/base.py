@@ -75,13 +75,12 @@ def main(cfg: omegaconf.DictConfig) -> None:
         num_sanity_val_steps=0,
     )
     
-    # trainer.fit(model=model, datamodule=datamodule)
+    trainer.fit(model=model, datamodule=datamodule)
     
     trainer.test(
         model=model,
         datamodule=datamodule,
-        # ckpt_path="best",
-        ckpt_path="/home/minami/lip2sp/checkpoints/20240320_144001/epoch=4-step=25-val_loss=0.669.ckpt",
+        ckpt_path="best",
     )
     
     wandb.finish()
