@@ -13,6 +13,8 @@ from jiwer import wer
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
 
+from src.log_fn.save_loss import save_epoch_loss_plot
+from src.log_fn.save_sample import save_mel
 from src.loss_fn.base import LossFunctions
 from src.model.base import BaseModel
 from src.model.pwg import Generator
@@ -26,27 +28,17 @@ class LitBaseModel(L.LightningModule):
         self.automatic_optimization = True
         self.model = BaseModel(cfg)
         self.loss_fn = LossFunctions()
-
-        self.pwg = Generator(cfg)
-        pretrained_dict = torch.load(cfg["model"]["pwg"]["model_path"])
+        self.train_step_loss_list = []
+        self.train_epoch_loss_list = []
+        self.val_step_loss_list = []
+        self.val_epoch_loss_list = []
+        self.train_mel_example = {"gt": None, "pred": None}
+        self.val_mel_example = {"gt": None, "pred": None}
+        self.pwg = Generator(self.cfg)
+        pretrained_dict = torch.load(self.cfg["model"]["pwg"]["model_path"])
         self.pwg.load_state_dict(pretrained_dict["gen"], strict=True)
 
-    def forward(
-        self,
-        lip: torch.Tensor,
-        audio: None,
-        lip_len: torch.Tensor,
-        spk_emb: torch.Tensor,
-    ) -> torch.Tensor:
-        pred = self.model(
-            lip=lip,
-            audio=None,
-            lip_len=lip_len,
-            spk_emb=spk_emb,
-        )
-        return pred
-
-    def step_typical_process(self, batch: list) -> tuple:
+    def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
         (
             wav,
             lip,
@@ -58,32 +50,76 @@ class LitBaseModel(L.LightningModule):
             speaker,
             filename,
         ) = batch
-        pred = self.forward(
+        pred = self.model(
             lip=lip,
             audio=None,
             lip_len=lip_len,
             spk_emb=spk_emb,
         )
         loss = self.loss_fn.mae_loss(pred, feature, feature_len, max_len=pred.shape[-1])
-        return pred, loss
 
-    def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
-        pred, loss = self.step_typical_process(batch)
         self.log(
             "train_loss",
             loss,
             logger=True,
             batch_size=self.cfg["training"]["params"]["batch_size"],
         )
+        self.train_step_loss_list.append(loss.item())
+        self.train_mel_example["gt"] = feature[0].cpu().detach().numpy().astype(np.float32)
+        self.train_mel_example["pred"] = pred[0].cpu().detach().numpy().astype(np.float32)
         return loss
 
     def validation_step(self, batch: list, batch_index: int) -> None:
-        pred, loss = self.step_typical_process(batch)
+        (
+            wav,
+            lip,
+            feature,
+            feature_avhubert,
+            spk_emb,
+            feature_len,
+            lip_len,
+            speaker,
+            filename,
+        ) = batch
+        pred = self.model(
+            lip=lip,
+            audio=None,
+            lip_len=lip_len,
+            spk_emb=spk_emb,
+        )
+        loss = self.loss_fn.mae_loss(pred, feature, feature_len, max_len=pred.shape[-1])
+
         self.log(
             "val_loss",
             loss,
             logger=True,
             batch_size=self.cfg["training"]["params"]["batch_size"],
+        )
+        self.val_step_loss_list.append(loss.item())
+        self.val_mel_example["gt"] = feature[0].cpu().detach().numpy().astype(np.float32)
+        self.val_mel_example["pred"] = pred[0].cpu().detach().numpy().astype(np.float32)
+
+    def on_validation_epoch_end(self) -> None:
+        self.train_epoch_loss_list.append(np.mean(self.train_step_loss_list))
+        self.train_step_loss_list.clear()
+        self.val_epoch_loss_list.append(np.mean(self.val_step_loss_list))
+        self.val_step_loss_list.clear()
+        save_epoch_loss_plot(
+            title="loss",
+            train_loss_list=self.train_epoch_loss_list,
+            val_loss_list=self.val_epoch_loss_list,
+        )
+        save_mel(
+            cfg=self.cfg,
+            gt=self.train_mel_example["gt"],
+            pred=self.train_mel_example["pred"],
+            filename="train",
+        )
+        save_mel(
+            cfg=self.cfg,
+            gt=self.val_mel_example["gt"],
+            pred=self.val_mel_example["pred"],
+            filename="val",
         )
 
     def test_step(self, batch: list, batch_index: int) -> None:
@@ -98,7 +134,7 @@ class LitBaseModel(L.LightningModule):
             speaker,
             filename,
         ) = batch
-        pred = self.forward(
+        pred = self.model(
             lip=lip,
             audio=None,
             lip_len=lip_len,
@@ -107,10 +143,11 @@ class LitBaseModel(L.LightningModule):
         noise = torch.randn(
             pred.shape[0], 1, pred.shape[-1] * self.cfg["data"]["audio"]["hop_length"]
         ).to(device=pred.device, dtype=pred.dtype)
+
         wav_pred = self.pwg(noise, pred)
         wav_abs = self.pwg(noise, feature)
+        
         n_sample_min = min(wav_gt.shape[-1], wav_pred.shape[-1], wav_abs.shape[-1])
-
         wav_gt = self.process_wav(wav_gt, n_sample_min)
         wav_abs = self.process_wav(wav_abs, n_sample_min)
         wav_pred = self.process_wav(wav_pred, n_sample_min)
@@ -197,23 +234,6 @@ class LitBaseModel(L.LightningModule):
         ]
         self.test_data_list += data
 
-    def process_wav(self, wav: torch.Tensor, n_sample: int) -> torch.Tensor:
-        wav = wav.to(torch.float32)
-        wav = wav.squeeze(0).squeeze(0)
-        wav /= torch.max(torch.abs(wav))
-        wav = wav[:n_sample]
-        return wav
-
-    def calc_error_rate(self, utt: list, utt_pred: list) -> float:
-        wer_gt = None
-        try:
-            wer_gt = np.clip(wer(utt, utt_pred), a_min=0, a_max=1)
-        except:  # noqa: E722
-            wer_gt = 1.0
-        if wer_gt is None:
-            raise ValueError("Word Error Rate was not found.")
-        return wer_gt
-
     def on_test_start(self) -> None:
         self.test_data_columns = [
             "speaker",
@@ -225,7 +245,7 @@ class LitBaseModel(L.LightningModule):
             "estoi",
             "wer",
         ]
-        self.test_data_list: list[list] = []
+        self.test_data_list = []
 
         csv_path = Path("~/lip2sp/csv/ATR503.csv").expanduser()
         self.df_utt = pd.read_csv(str(csv_path))
@@ -308,13 +328,30 @@ class LitBaseModel(L.LightningModule):
             self.mecab,
         )
 
+    def process_wav(self, wav: torch.Tensor, n_sample: int) -> torch.Tensor:
+        wav = wav.to(torch.float32)
+        wav = wav.squeeze(0).squeeze(0)
+        wav /= torch.max(torch.abs(wav))
+        wav = wav[:n_sample]
+        return wav
+
+    def calc_error_rate(self, utt: list, utt_pred: list) -> float:
+        wer_gt = None
+        try:
+            wer_gt = np.clip(wer(utt, utt_pred), a_min=0, a_max=1)
+        except:  # noqa: E722
+            wer_gt = 1.0
+        if wer_gt is None:
+            raise ValueError("Word Error Rate was not found.")
+        return wer_gt
+
     def configure_optimizers(self):
         optimizer = None
         scheduler = None
 
         if self.cfg["training"]["optimizer"]["type"] == "adam":
             optimizer = torch.optim.Adam(
-                params=self.parameters(),
+                params=self.model.parameters(),
                 lr=self.learning_rate,
                 betas=(
                     self.cfg["training"]["optimizer"]["beta_1"],
@@ -324,7 +361,7 @@ class LitBaseModel(L.LightningModule):
             )
         elif self.cfg["training"]["optimizer"]["type"] == "adamw":
             optimizer = torch.optim.AdamW(
-                params=self.parameters(),
+                params=self.model.parameters(),
                 lr=self.learning_rate,
                 betas=(
                     self.cfg["training"]["optimizer"]["beta_1"],

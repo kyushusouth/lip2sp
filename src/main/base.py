@@ -72,14 +72,16 @@ def main(cfg: omegaconf.DictConfig) -> None:
         accumulate_grad_batches=cfg["training"]["params"]["accumulate_grad_batches"],
         gradient_clip_val=cfg["training"]["params"]["gradient_clip_val"],
         gradient_clip_algorithm=cfg["training"]["params"]["gradient_clip_algorithm"],
+        num_sanity_val_steps=0,
     )
     
-    trainer.fit(model=model, datamodule=datamodule)
+    # trainer.fit(model=model, datamodule=datamodule)
     
     trainer.test(
         model=model,
         datamodule=datamodule,
-        ckpt_path="best",
+        # ckpt_path="best",
+        ckpt_path="/home/minami/lip2sp/checkpoints/20240320_144001/epoch=4-step=25-val_loss=0.669.ckpt",
     )
     
     wandb.finish()
