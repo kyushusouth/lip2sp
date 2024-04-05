@@ -28,17 +28,19 @@ class LitBaseModel(L.LightningModule):
         self.automatic_optimization = True
         self.model = BaseModel(cfg)
         self.loss_fn = LossFunctions()
-        
+
         self.train_step_loss_list = []
         self.train_epoch_loss_list = []
         self.val_step_loss_list = []
         self.val_epoch_loss_list = []
         self.train_mel_example = {"gt": None, "pred": None}
         self.val_mel_example = {"gt": None, "pred": None}
-        
-        self.pwg = LitPWG.load_from_checkpoint(self.cfg["model"]["pwg"]["model_path"], cfg=cfg)
+
+        self.pwg = LitPWG.load_from_checkpoint(
+            self.cfg["model"]["pwg"]["model_path"], cfg=cfg
+        )
         self.pwg.eval()
-        
+
     def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
         (
             wav,
@@ -66,8 +68,12 @@ class LitBaseModel(L.LightningModule):
             batch_size=self.cfg["training"]["params"]["batch_size"],
         )
         self.train_step_loss_list.append(loss.item())
-        self.train_mel_example["gt"] = feature[0].cpu().detach().numpy().astype(np.float32)
-        self.train_mel_example["pred"] = pred[0].cpu().detach().numpy().astype(np.float32)
+        self.train_mel_example["gt"] = (
+            feature[0].cpu().detach().numpy().astype(np.float32)
+        )
+        self.train_mel_example["pred"] = (
+            pred[0].cpu().detach().numpy().astype(np.float32)
+        )
         return loss
 
     def validation_step(self, batch: list, batch_index: int) -> None:
@@ -97,7 +103,9 @@ class LitBaseModel(L.LightningModule):
             batch_size=self.cfg["training"]["params"]["batch_size"],
         )
         self.val_step_loss_list.append(loss.item())
-        self.val_mel_example["gt"] = feature[0].cpu().detach().numpy().astype(np.float32)
+        self.val_mel_example["gt"] = (
+            feature[0].cpu().detach().numpy().astype(np.float32)
+        )
         self.val_mel_example["pred"] = pred[0].cpu().detach().numpy().astype(np.float32)
 
     def on_validation_epoch_end(self) -> None:
@@ -141,13 +149,13 @@ class LitBaseModel(L.LightningModule):
             lip_len=lip_len,
             spk_emb=spk_emb,
         )
-        
+
         noise = torch.randn(
             pred.shape[0], 1, pred.shape[-1] * self.cfg["data"]["audio"]["hop_length"]
         ).to(device=pred.device, dtype=pred.dtype)
         wav_pred = self.pwg(noise, pred)
         wav_abs = self.pwg(noise, feature)
-        
+
         n_sample_min = min(wav_gt.shape[-1], wav_pred.shape[-1], wav_abs.shape[-1])
         wav_gt = self.process_wav(wav_gt, n_sample_min)
         wav_abs = self.process_wav(wav_abs, n_sample_min)
