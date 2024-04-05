@@ -10,7 +10,7 @@ from src.data_process.utils import get_upsample, wav2mel, wav2mel_avhubert
 
 
 def load_data(
-    audio_path: pathlib.Path, video_path: pathlib.Path, cfg: omegaconf.DictConfig
+    audio_path: pathlib.Path, video_path: pathlib.Path | None, cfg: omegaconf.DictConfig
 ) -> tuple:
     wav, _ = librosa.load(str(audio_path), sr=cfg["data"]["audio"]["sr"])
     wav = wav / np.max(np.abs(wav))  # (T,)
