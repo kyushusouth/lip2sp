@@ -1,10 +1,10 @@
 program: ../src/main/base.py
-project: pytorch-lightning-test-base-sweep
-name: test-1
+project: lip2sp-base
+name: test-ssl-20240325-1
 method: grid
 parameters:
   model.ssl_type:
-    values: ['avhubert', 'raven', 'vatlm']
+    values: ["avhubert", "raven", "vatlm"]
 metric:
   name: val_loss
   goal: minimize

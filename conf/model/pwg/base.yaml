@@ -19,4 +19,4 @@ discriminator:
   use_weight_norm: false
   dropout: 0
 
-model_path: "/home/minami/lip2sp/checkpoints/20240320_175246/epoch=4-step=200-val_loss=0.000.ckpt"
+model_path: "/home/minami/lip2sp/checkpoints/pwg/20240325_121259/epoch=14-step=39000-val_loss=0.000.ckpt"

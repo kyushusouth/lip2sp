@@ -19,6 +19,8 @@ hop_length_list : [80, 160, 320]
 win_length_list : [320, 640, 1280]
 stft_loss_weight : 1.0
 gan_loss_weight : 4.0
+finetune: true
+finetune_start_model_path: "/home/minami/lip2sp/checkpoints/pwg/20240324_185245/epoch=13-step=132020-val_loss=0.000.ckpt"
 wandb:
   project_name: "lip2sp-pwg"
   default_root_dir: "./"

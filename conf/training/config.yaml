@@ -1,13 +1,16 @@
 defaults:
-  - optimizer: adam
-  - scheduler: exp
-  - params: pwg
+  - optimizer: adamw
+  - scheduler: cawr
+  - params: base
+  # - optimizer: adam
+  # - scheduler: exp
+  # - params: pwg
 
-params:
-  max_epoch: 3
-  early_stopping_patience: 2
-  limit_train_batches: 0.01
-  limit_val_batches: 0.01
-  limit_test_batches: 0.01
-  wandb:
-    project_name: "debug"
+# params:
+#   max_epoch: 3
+#   early_stopping_patience: 2
+#   limit_train_batches: 0.1
+#   limit_val_batches: 0.1
+#   limit_test_batches: 0.1
+#   wandb:
+#     project_name: "debug"

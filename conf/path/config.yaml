@@ -6,14 +6,14 @@ kablab:
   text_dir: "~/dataset/lip/utt"
 
 jvs:
-  data_dir: "~/dataset/jvs_ver1"
+  data_dir: "~/dataset/jvs_ver1_cut_silence"
   df_path: "~/dataset/lip/data_split_csv/jvs.csv"
   path_train: "~/dataset/lip/np_files/jvs/train"
   emb_dir: "~/dataset/jvs_ver1/emb"
   stat_path: "~/dataset/lip/stat/jvs.npz"
 
 hifi_captain:
-  data_dir: "~/dataset/hi-fi-captain/ja-JP"
+  data_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP"
   df_path: "~/dataset/lip/data_split_csv/hifi_captain.csv"
   emb_dir: "~/dataset/hi-fi-captain/ja-JP"
   stat_path: "~/dataset/lip/stat/hi-fi-captain.npz"
