@@ -15,15 +15,20 @@ from src.pl_module.base import LitBaseModel
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
-    checkpoint_save_dir = (
+    cfg["training"]["params"]["checkpoints_save_dir"] = str(
         Path(cfg["training"]["params"]["checkpoints_save_dir"]).expanduser()
         / start.CURRENT_TIME
     )
-    checkpoint_save_dir.mkdir(parents=True, exist_ok=True)
-    cfg["training"]["params"]["checkpoints_save_dir"] = str(checkpoint_save_dir)
 
     datamodule = BaseDataModule(cfg)
-    model = LitBaseModel(cfg)
+
+    if cfg["training"]["params"]["finetune"]:
+        model = LitBaseModel.load_from_checkpoint(
+            checkpoint_path=cfg["training"]["params"]["finetune_start_model_path"],
+            cfg=cfg,
+        )
+    else:
+        model = LitBaseModel(cfg)
 
     wandb_logger = WandbLogger(
         project=cfg["training"]["params"]["wandb"]["project_name"],
@@ -35,7 +40,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
         name=cfg["training"]["params"]["wandb"]["run_name"],
         group=cfg["training"]["params"]["wandb"]["group_name"],
     )
-    
+
     wandb_logger.watch(model, log="all", log_graph=True, log_freq=10)
 
     trainer = L.Trainer(
@@ -54,7 +59,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
                     "save_checkpoint_every_n_epochs"
                 ],
                 save_top_k=cfg["training"]["params"]["save_checkpoint_top_k"],
-                dirpath=str(checkpoint_save_dir),
+                dirpath=cfg["training"]["params"]["checkpoints_save_dir"],
                 filename="{epoch}-{step}-{val_loss:.3f}",
             ),
             LearningRateMonitor(logging_interval="epoch"),
@@ -73,17 +78,16 @@ def main(cfg: omegaconf.DictConfig) -> None:
         gradient_clip_val=cfg["training"]["params"]["gradient_clip_val"],
         gradient_clip_algorithm=cfg["training"]["params"]["gradient_clip_algorithm"],
         num_sanity_val_steps=0,
-        deterministic=True,
     )
-    
+
     trainer.fit(model=model, datamodule=datamodule)
-    
+
     trainer.test(
         model=model,
         datamodule=datamodule,
         ckpt_path="best",
     )
-    
+
     wandb.finish()
 
 
