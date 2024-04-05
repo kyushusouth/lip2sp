@@ -15,15 +15,20 @@ from src.pl_module.pwg import LitPWG
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
-    checkpoint_save_dir = (
+    cfg["training"]["params"]["checkpoints_save_dir"] = str(
         Path(cfg["training"]["params"]["checkpoints_save_dir"]).expanduser()
         / start.CURRENT_TIME
     )
-    checkpoint_save_dir.mkdir(parents=True, exist_ok=True)
-    cfg["training"]["params"]["checkpoints_save_dir"] = str(checkpoint_save_dir)
 
     datamodule = BaseDataModule(cfg)
-    model = LitPWG(cfg)
+
+    if cfg["training"]["params"]["finetune"]:
+        model = LitPWG.load_from_checkpoint(
+            checkpoint_path=cfg["training"]["params"]["finetune_start_model_path"],
+            cfg=cfg,
+        )
+    else:
+        model = LitPWG(cfg)
 
     wandb_logger = WandbLogger(
         project=cfg["training"]["params"]["wandb"]["project_name"],
@@ -54,7 +59,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
                     "save_checkpoint_every_n_epochs"
                 ],
                 save_top_k=cfg["training"]["params"]["save_checkpoint_top_k"],
-                dirpath=str(checkpoint_save_dir),
+                dirpath=cfg["training"]["params"]["checkpoints_save_dir"],
                 filename="{epoch}-{step}-{val_loss:.3f}",
             ),
             LearningRateMonitor(logging_interval="epoch"),
@@ -74,11 +79,11 @@ def main(cfg: omegaconf.DictConfig) -> None:
 
     trainer.fit(model=model, datamodule=datamodule)
 
-    trainer.test(
-        model=model,
-        datamodule=datamodule,
-        ckpt_path="best",
-    )
+    # trainer.test(
+    #     model=model,
+    #     datamodule=datamodule,
+    #     ckpt_path="best",
+    # )
 
     wandb.finish()
 
