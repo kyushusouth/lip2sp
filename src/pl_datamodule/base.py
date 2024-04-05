@@ -44,13 +44,18 @@ class BaseDataModule(L.LightningDataModule):
         data_path_list = []
         for i in range(df.shape[0]):
             row = df.iloc[i]
+            audio_path = (
+                audio_dir
+                / row["speaker"]
+                / "wav"
+                / row["parent_dir"]
+                / f'{row["filename"]}.wav'
+            )
+            if not audio_path.exists():
+                continue
             data_path_list.append(
                 {
-                    "audio_path": audio_dir
-                    / row["speaker"]
-                    / "wav"
-                    / row["parent_dir"]
-                    / f'{row["filename"]}.wav',
+                    "audio_path": audio_path,
                     "video_path": None,
                     "speaker": row["speaker"],
                     "filename": row["filename"],
@@ -64,13 +69,18 @@ class BaseDataModule(L.LightningDataModule):
         data_path_list = []
         for i in range(df.shape[0]):
             row = df.iloc[i]
+            audio_path = (
+                audio_dir
+                / row["speaker"]
+                / row["data"]
+                / "wav24kHz16bit"
+                / f'{row["filename"]}.wav'
+            )
+            if not audio_path.exists():
+                continue
             data_path_list.append(
                 {
-                    "audio_path": audio_dir
-                    / row["speaker"]
-                    / row["data"]
-                    / "wav24kHz16bit"
-                    / f'{row["filename"]}.wav',
+                    "audio_path": audio_path,
                     "video_path": None,
                     "speaker": row["speaker"],
                     "filename": row["filename"],
