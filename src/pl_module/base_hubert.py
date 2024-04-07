@@ -29,7 +29,7 @@ class LitBaseHuBERTModel(L.LightningModule):
 
         self.model = BaseHuBERTModel(cfg)
         if cfg["model"]["decoder"]["hubert"]["freeze"]:
-            for param in self.model.hubert_decoder.parameters():
+            for param in self.model.hubert_decoder.hubert.parameters():
                 param.requires_grad = False
 
         self.loss_fn = LossFunctions()
