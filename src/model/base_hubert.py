@@ -2,7 +2,7 @@ import omegaconf
 import torch
 import torch.nn as nn
 
-from src.model.components.conv_decoder import ConvDecoder
+from src.model.components.conv_decoder import ConvDecoderHuBERT
 from src.model.components.hubert_decoder import HuBERTDecoder
 from src.model.utils import load_avhubert, load_raven, load_vatlm
 
@@ -67,7 +67,7 @@ class BaseHuBERTModel(nn.Module):
                 hidden_channels,
             )
 
-        self.conv_decoder = ConvDecoder(cfg, hidden_channels)
+        self.conv_decoder = ConvDecoderHuBERT(cfg, hidden_channels)
         self.hubert_decoder = HuBERTDecoder(cfg, hidden_channels)
 
     def extract_feature_avhubert(
@@ -225,9 +225,9 @@ class BaseHuBERTModel(nn.Module):
 
         conv_output_mel, conv_output_hubert_prj = self.conv_decoder(feature)
 
-        if self.cfg["model"]["decoder"]["hubert"]["freeze"]:
-            self.hubert_decoder.eval()
-        hubert_output_reg, hubert_output_cls = self.hubert_decoder(feature)
+        hubert_output_reg, hubert_output_cls = self.hubert_decoder(
+            conv_output_hubert_prj.permute(0, 2, 1)
+        )
 
         return (
             conv_output_mel,
