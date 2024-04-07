@@ -14,7 +14,12 @@ from src.data_process.utils import (
     wav2mel,
     wav2mel_avhubert,
 )
-from src.dataset.utils import get_spk_emb, get_spk_emb_hifi_captain, get_spk_emb_jvs
+from src.dataset.utils import (
+    get_spk_emb,
+    get_spk_emb_hifi_captain,
+    get_spk_emb_jsut,
+    get_spk_emb_jvs,
+)
 from src.transform.base import BaseTransform
 
 
@@ -32,6 +37,7 @@ class BaseHuBERTDataset(Dataset):
         self.embs = get_spk_emb(cfg)
         self.embs.update(get_spk_emb_jvs(cfg))
         self.embs.update(get_spk_emb_hifi_captain(cfg))
+        self.embs.update(get_spk_emb_jsut(cfg))
         self.lip_mean = torch.from_numpy(np.array([cfg["data"]["video"]["lip_mean"]]))
         self.lip_std = torch.from_numpy(np.array([cfg["data"]["video"]["lip_std"]]))
         feat_mean_var_std = np.load(
