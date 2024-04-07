@@ -23,14 +23,18 @@ def process(src_path: Path, dest_path: Path) -> None:
     )
 
 
-@hydra.main(version_base=None, config_path="../../conf", config_name="config")
-def main(cfg: omegaconf.DictConfig) -> None:
-    df_hifi = pd.read_csv(
-        str(Path(cfg["path"]["hifi_captain"]["df_path"]).expanduser())
-    )
+def process_hifi_captain(cfg: omegaconf.DictConfig) -> None:
     src_dir = Path(cfg["path"]["hifi_captain"]["data_dir"]).expanduser()
-    dest_dir = Path(cfg["path"]["hifi_captain"]["data_dir_cut_silence"]).expanduser()
-    for i, row in tqdm(df_hifi.iterrows(), total=len(df_hifi)):
+    dest_dir = Path(str(src_dir).replace(src_dir.name, f"{src_dir.name}_cut_silence"))
+    df_src_path = Path(cfg["path"]["hifi_captain"]["df_path"]).expanduser()
+    df_dest_path = Path(
+        str(df_src_path).replace(
+            df_src_path.parent.name, f"{df_src_path.parent.name}_cut_silence"
+        )
+    )
+    df_src = pd.read_csv(str(df_src_path))
+
+    for i, row in tqdm(df_src.iterrows(), total=len(df_src)):
         src_path = (
             src_dir
             / row["speaker"]
@@ -50,10 +54,21 @@ def main(cfg: omegaconf.DictConfig) -> None:
         except:
             continue
 
-    df_jvs = pd.read_csv(str(Path(cfg["path"]["jvs"]["df_path"]).expanduser()))
-    src_dir = Path(cfg["path"]["jvs"]["data_dir"]).expanduser()
-    dest_dir = Path(cfg["path"]["jvs"]["data_dir_cut_silence"]).expanduser()
-    for i, row in tqdm(df_jvs.iterrows(), total=len(df_jvs)):
+    df_src.to_csv(str(df_dest_path), index=False)
+
+
+def process_jvs(cfg: omegaconf.DictConfig) -> None:
+    src_dir = Path(cfg["path"]["jsut"]["data_dir"]).expanduser()
+    dest_dir = Path(str(src_dir).replace(src_dir.name, f"{src_dir.name}_cut_silence"))
+    df_src_path = Path(cfg["path"]["jsut"]["df_path"]).expanduser()
+    df_dest_path = Path(
+        str(df_src_path).replace(
+            df_src_path.parent.name, f"{df_src_path.parent.name}_cut_silence"
+        )
+    )
+    df_src = pd.read_csv(str(df_src_path))
+
+    for i, row in tqdm(df_src.iterrows(), total=len(df_src)):
         src_path = (
             src_dir
             / row["speaker"]
@@ -72,6 +87,37 @@ def main(cfg: omegaconf.DictConfig) -> None:
             process(src_path, dest_path)
         except:
             continue
+
+    df_src.to_csv(str(df_dest_path), index=False)
+
+
+def process_jsut(cfg: omegaconf.DictConfig) -> None:
+    src_dir = Path(cfg["path"]["jsut"]["data_dir"]).expanduser()
+    dest_dir = Path(str(src_dir).replace(src_dir.name, f"{src_dir.name}_cut_silence"))
+    df_src_path = Path(cfg["path"]["jsut"]["df_path"]).expanduser()
+    df_dest_path = Path(
+        str(df_src_path).replace(
+            df_src_path.parent.name, f"{df_src_path.parent.name}_cut_silence"
+        )
+    )
+    df_src = pd.read_csv(str(df_src_path))
+
+    for i, row in tqdm(df_src.iterrows(), total=len(df_src)):
+        src_path = src_dir / row["dirname"] / "wav" / f'{row["filename"]}.wav'
+        dest_path = dest_dir / row["dirname"] / "wav" / f'{row["filename"]}.wav'
+        try:
+            process(src_path, dest_path)
+        except:
+            continue
+
+    df_src.to_csv(str(df_dest_path), index=False)
+
+
+@hydra.main(version_base=None, config_path="../../conf", config_name="config")
+def main(cfg: omegaconf.DictConfig) -> None:
+    # process_hifi_captain(cfg)
+    # process_jvs(cfg)
+    process_jsut(cfg)
 
 
 if __name__ == "__main__":
