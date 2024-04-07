@@ -82,6 +82,7 @@ def adjust_seq_lengths(batch: list, cfg: omegaconf.DictConfig) -> tuple:
     spk_emb = torch.stack(spk_emb_list)
     feature_len = torch.stack(feature_len_list)
     lip_len = torch.stack(lip_len_list)
+
     return (
         wav,
         lip,
