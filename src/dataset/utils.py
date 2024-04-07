@@ -37,3 +37,14 @@ def get_spk_emb_hifi_captain(cfg: omegaconf.DictConfig):
         emb = emb / np.linalg.norm(emb)
         spk_emb_dict[speaker] = emb
     return spk_emb_dict
+
+
+def get_spk_emb_jsut(cfg: omegaconf.DictConfig):
+    spk_emb_dict = {}
+    data_dir = Path(cfg["path"]["jsut"]["emb_dir"]).expanduser()
+    for speaker in ["female"]:
+        data_path = data_dir / speaker / "emb.npy"
+        emb = np.load(str(data_path))
+        emb = emb / np.linalg.norm(emb)
+        spk_emb_dict[speaker] = emb
+    return spk_emb_dict
