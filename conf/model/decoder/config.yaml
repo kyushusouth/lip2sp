@@ -1,0 +1,10 @@
+conv:
+  n_conv_layers: 2
+  conv_kernel_size: 3
+  dropout: 0.1
+
+hubert:
+  model_name: rinna/japanese-hubert-base
+  n_clusters: 100
+  ignore_index: 0
+  freeze: true

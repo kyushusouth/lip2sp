@@ -3,7 +3,7 @@ defaults:
   - raven: base
   - vatlm: base
   - pwg: base
-  - decoder: conv
+  - decoder: config
 
 ssl_type: avhubert
 ssl_feature_dropout: 0
