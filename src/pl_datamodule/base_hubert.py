@@ -69,7 +69,16 @@ class BaseHuBERTDataModule(L.LightningDataModule):
 
     def get_hifi_captain_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
-        audio_dir = Path(self.cfg["path"]["hifi_captain"]["data_dir"]).expanduser()
+        audio_dir = Path(self.cfg["path"]["hifi_captain"]["audio_dir"]).expanduser()
+        hubert_feature_prj_output_dir = Path(
+            self.cfg["path"]["hifi_captain"]["hubert_feature_prj_output_dir"]
+        ).expanduser()
+        hubert_encoder_output_dir = Path(
+            self.cfg["path"]["hifi_captain"]["hubert_encoder_output_dir"]
+        ).expanduser()
+        hubert_cluster_dir = Path(
+            self.cfg["path"]["hifi_captain"]["hubert_cluster_dir"]
+        ).expanduser()
         data_path_list = []
         for i, row in df.iterrows():
             audio_path = (
@@ -79,12 +88,41 @@ class BaseHuBERTDataModule(L.LightningDataModule):
                 / row["parent_dir"]
                 / f'{row["filename"]}.wav'
             )
-            if not audio_path.exists():
+            hubert_feature_prj_output_path = (
+                hubert_feature_prj_output_dir
+                / row["speaker"]
+                / "wav"
+                / row["parent_dir"]
+                / f'{row["filename"]}.npy'
+            )
+            hubert_encoder_output_path = (
+                hubert_encoder_output_dir
+                / row["speaker"]
+                / "wav"
+                / row["parent_dir"]
+                / f'{row["filename"]}.npy'
+            )
+            hubert_cluster_path = (
+                hubert_cluster_dir
+                / row["speaker"]
+                / "wav"
+                / row["parent_dir"]
+                / f'{row["filename"]}.npy'
+            )
+            if (
+                (not audio_path.exists())
+                or (not hubert_feature_prj_output_path.exists())
+                or (not hubert_encoder_output_path.exists())
+                or (not hubert_cluster_path.exists())
+            ):
                 continue
             data_path_list.append(
                 {
                     "audio_path": audio_path,
                     "video_path": None,
+                    "hubert_feature_prj_output_path": hubert_feature_prj_output_path,
+                    "hubert_encoder_output_path": hubert_encoder_output_path,
+                    "hubert_cluster_path": hubert_cluster_path,
                     "speaker": row["speaker"],
                     "filename": row["filename"],
                 }
@@ -93,7 +131,16 @@ class BaseHuBERTDataModule(L.LightningDataModule):
 
     def get_jvs_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
-        audio_dir = Path(self.cfg["path"]["jvs"]["data_dir"]).expanduser()
+        audio_dir = Path(self.cfg["path"]["jvs"]["audio_dir"]).expanduser()
+        hubert_feature_prj_output_dir = Path(
+            self.cfg["path"]["jvs"]["hubert_feature_prj_output_dir"]
+        ).expanduser()
+        hubert_encoder_output_dir = Path(
+            self.cfg["path"]["jvs"]["hubert_encoder_output_dir"]
+        ).expanduser()
+        hubert_cluster_dir = Path(
+            self.cfg["path"]["jvs"]["hubert_cluster_dir"]
+        ).expanduser()
         data_path_list = []
         for i, row in df.iterrows():
             audio_path = (
@@ -103,13 +150,92 @@ class BaseHuBERTDataModule(L.LightningDataModule):
                 / "wav24kHz16bit"
                 / f'{row["filename"]}.wav'
             )
-            if not audio_path.exists():
+            hubert_feature_prj_output_path = (
+                hubert_feature_prj_output_dir
+                / row["speaker"]
+                / row["data"]
+                / "wav24kHz16bit"
+                / f'{row["filename"]}.npy'
+            )
+            hubert_encoder_output_path = (
+                hubert_encoder_output_dir
+                / row["speaker"]
+                / row["data"]
+                / "wav24kHz16bit"
+                / f'{row["filename"]}.npy'
+            )
+            hubert_cluster_path = (
+                hubert_cluster_dir
+                / row["speaker"]
+                / row["data"]
+                / "wav24kHz16bit"
+                / f'{row["filename"]}.npy'
+            )
+            if (
+                (not audio_path.exists())
+                or (not hubert_feature_prj_output_path.exists())
+                or (not hubert_encoder_output_path.exists())
+                or (not hubert_cluster_path.exists())
+            ):
                 continue
             data_path_list.append(
                 {
                     "audio_path": audio_path,
                     "video_path": None,
+                    "hubert_feature_prj_output_path": hubert_feature_prj_output_path,
+                    "hubert_encoder_output_path": hubert_encoder_output_path,
+                    "hubert_cluster_path": hubert_cluster_path,
                     "speaker": row["speaker"],
+                    "filename": row["filename"],
+                }
+            )
+        return data_path_list
+
+    def get_jsut_path_list(self, df: pd.DataFrame, data_split: str) -> list:
+        df = df.loc[df["data_split"] == data_split]
+        audio_dir = Path(self.cfg["path"]["jsut"]["audio_dir"]).expanduser()
+        hubert_feature_prj_output_dir = Path(
+            self.cfg["path"]["jsut"]["hubert_feature_prj_output_dir"]
+        ).expanduser()
+        hubert_encoder_output_dir = Path(
+            self.cfg["path"]["jsut"]["hubert_encoder_output_dir"]
+        ).expanduser()
+        hubert_cluster_dir = Path(
+            self.cfg["path"]["jsut"]["hubert_cluster_dir"]
+        ).expanduser()
+        data_path_list = []
+        for i, row in df.iterrows():
+            audio_path = audio_dir / row["dirname"] / "wav" / f'{row["filename"]}.wav'
+            hubert_feature_prj_output_path = (
+                hubert_feature_prj_output_dir
+                / row["dirname"]
+                / "wav"
+                / f'{row["filename"]}.npy'
+            )
+            hubert_encoder_output_path = (
+                hubert_encoder_output_dir
+                / row["dirname"]
+                / "wav"
+                / f'{row["filename"]}.npy'
+            )
+            hubert_cluster_path = (
+                hubert_cluster_dir / row["dirname"] / "wav" / f'{row["filename"]}.npy'
+            )
+            if (
+                (not audio_path.exists())
+                or (not hubert_feature_prj_output_path.exists())
+                or (not hubert_encoder_output_path.exists())
+                or (not hubert_cluster_path.exists())
+            ):
+                continue
+            data_path_list.append(
+                {
+                    "audio_path": audio_path,
+                    "video_path": None,
+                    "hubert_feature_prj_output_path": hubert_feature_prj_output_path,
+                    "hubert_encoder_output_path": hubert_encoder_output_path,
+                    "hubert_cluster_path": hubert_cluster_path,
+                    "speaker": "female",
                     "filename": row["filename"],
                 }
             )
@@ -143,6 +269,13 @@ class BaseHuBERTDataModule(L.LightningDataModule):
             train_data_path_list += self.get_jvs_path_list(df, "train")
             val_data_path_list += self.get_jvs_path_list(df, "val")
             test_data_path_list += self.get_jvs_path_list(df, "test")
+        if self.cfg["data_choice"]["jsut"]["use"]:
+            df = pd.read_csv(
+                str(Path(self.cfg["path"]["jsut"]["df_path"]).expanduser())
+            )
+            train_data_path_list += self.get_jsut_path_list(df, "train")
+            val_data_path_list += self.get_jsut_path_list(df, "val")
+            test_data_path_list += self.get_jsut_path_list(df, "test")
 
         if stage == "fit":
             self.train_dataset = BaseHuBERTDataset(
