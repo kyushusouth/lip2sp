@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 
 import lightning as L
@@ -12,6 +13,7 @@ from cosine_annealing_warmup import CosineAnnealingWarmupRestarts
 from jiwer import wer
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
+from transformers import AutoModel
 
 from src.log_fn.save_loss import save_epoch_loss_plot
 from src.log_fn.save_sample import save_mel
@@ -41,6 +43,14 @@ class LitBaseModel(L.LightningModule):
         )
         self.pwg.eval()
 
+        model_name = "rinna/japanese-hubert-base"
+        self.hubert = AutoModel.from_pretrained(model_name)
+        self.hubert.eval()
+
+        with open("/home/minami/lip2sp/src/test/kmeans.pickle", "rb") as f:
+            kmeans = pickle.load(f)
+        self.kmeans = kmeans
+
     def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
         (
             wav,
@@ -53,13 +63,43 @@ class LitBaseModel(L.LightningModule):
             speaker,
             filename,
         ) = batch
-        pred = self.model(
+        pred, pred_cls, pred_reg = self.model(
             lip=lip,
             audio=None,
             lip_len=lip_len,
             spk_emb=spk_emb,
         )
         loss = self.loss_fn.mae_loss(pred, feature, feature_len, max_len=pred.shape[-1])
+
+        wav_pad = torch.nn.functional.pad(
+            wav,
+            (0, self.cfg["data"]["audio"]["sr"] // 100 * 2),
+            mode="constant",
+            value=0,
+        )
+        with torch.no_grad():
+            hubert_feature = self.hubert(wav_pad).last_hidden_state  # (B, T, C)
+        hubert_feature_cluster_list = []
+        for i in range(self.cfg["training"]["params"]["batch_size"]):
+            hubert_feature_cluster_pred = self.kmeans.predict(
+                hubert_feature[i].cpu().numpy()
+            )
+            hubert_feature_cluster_list.append(
+                torch.from_numpy(hubert_feature_cluster_pred)
+            )
+        hubert_feature_cluster = torch.stack(hubert_feature_cluster_list, dim=0).to(
+            dtype=torch.long, device=self.device
+        )
+
+        hubert_cls_loss = torch.nn.functional.cross_entropy(
+            pred_cls, hubert_feature_cluster
+        )
+        hubert_reg_loss = torch.nn.functional.l1_loss(
+            pred_reg.permute(0, 2, 1), hubert_feature
+        )
+
+        loss += hubert_reg_loss
+        loss += hubert_cls_loss
 
         self.log(
             "train_loss",
