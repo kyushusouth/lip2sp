@@ -65,11 +65,13 @@ class BaseTransform:
         """
         lip_mean = lip_mean.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)  # (C, 1, 1, 1)
         lip_std = lip_std.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)  # (C, 1, 1, 1)
-        feat_mean = feat_mean.unsqueeze(-1)  # (C, 1)
-        feat_std = feat_std.unsqueeze(-1)  # (C, 1)
         lip = lip / 255.0
         lip = (lip - lip_mean) / lip_std
-        feature = (feature - feat_mean) / feat_std
+
+        # feat_mean = feat_mean.unsqueeze(-1)  # (C, 1)
+        # feat_std = feat_std.unsqueeze(-1)  # (C, 1)
+        # feature = (feature - feat_mean) / feat_std
+
         feature_avhubert = F.layer_norm(
             feature_avhubert, feature_avhubert.shape[1:]
         ).permute(1, 0)  # (C, T)
