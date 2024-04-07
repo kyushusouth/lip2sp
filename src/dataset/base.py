@@ -1,12 +1,14 @@
 import pathlib
 from pathlib import Path
 
+import librosa
 import numpy as np
 import omegaconf
 import torch
+import torchvision
 from torch.utils.data import Dataset
 
-from src.data_process.transform import load_data
+from src.data_process.utils import get_upsample, wav2mel, wav2mel_avhubert
 from src.dataset.utils import get_spk_emb, get_spk_emb_hifi_captain, get_spk_emb_jvs
 from src.transform.base import BaseTransform
 
@@ -43,11 +45,47 @@ class BaseDataset(Dataset):
         filename = self.data_path_list[index]["filename"]
         spk_emb = torch.from_numpy(self.embs[speaker])
 
-        wav, feature, feature_avhubert, lip = load_data(
-            audio_path=audio_path,
-            video_path=video_path,
-            cfg=self.cfg,
+        wav, _ = librosa.load(str(audio_path), sr=self.cfg["data"]["audio"]["sr"])
+        wav = wav / np.max(np.abs(wav))  # (T,)
+        feature = wav2mel(wav, self.cfg, ref_max=False)  # (C, T)
+        feature_avhubert = wav2mel_avhubert(wav, self.cfg)  # (C, T)
+        upsample = get_upsample(self.cfg)
+
+        if video_path is not None:
+            lip, _, _ = torchvision.io.read_video(
+                str(video_path), pts_unit="sec", output_format="TCHW"
+            )  # (T, C, H, W)
+            lip = torchvision.transforms.functional.rgb_to_grayscale(lip)
+        else:
+            lip = torch.rand(int(feature.shape[1] * upsample), 1, 96, 96)
+        lip = lip.numpy()
+
+        data_len = min(
+            int(feature.shape[1] // upsample * upsample),
+            int(feature_avhubert.shape[1] // upsample * upsample),
+            int(lip.shape[0] * upsample),
         )
+
+        wav = wav[: int(self.cfg["data"]["audio"]["hop_length"] * data_len)]
+        wav_padded = np.zeros((int(self.cfg["data"]["audio"]["hop_length"] * data_len)))
+        wav_padded[: wav.shape[0]] = wav
+        wav = wav_padded
+
+        feature = feature[:, :data_len]
+        feature_padded = np.zeros((feature.shape[0], data_len))
+        feature_padded[:, : feature.shape[1]] = feature
+        feature = feature_padded
+
+        feature_avhubert = feature_avhubert[:, :data_len]
+        feature_avhubert_padded = np.zeros((feature_avhubert.shape[0], data_len))
+        feature_avhubert_padded[:, : feature_avhubert.shape[1]] = feature_avhubert
+        feature_avhubert = feature_avhubert_padded
+
+        lip = lip[: data_len // upsample]
+        lip_padded = np.zeros((data_len // upsample, 1, 96, 96))
+        lip_padded[: lip.shape[0]] = lip
+        lip = lip_padded
+
         wav = torch.from_numpy(wav)
         feature = torch.from_numpy(feature).permute(1, 0)  # (T, C)
         feature_avhubert = torch.from_numpy(feature_avhubert).permute(1, 0)  # (T, C)
