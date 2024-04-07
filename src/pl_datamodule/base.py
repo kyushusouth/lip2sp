@@ -22,8 +22,7 @@ class BaseDataModule(L.LightningDataModule):
         audio_dir = Path(self.cfg["path"]["kablab"]["audio_dir"]).expanduser()
         video_dir = Path(self.cfg["path"]["kablab"]["video_dir"]).expanduser()
         data_path_list = []
-        for i in range(df.shape[0]):
-            row = df.iloc[i]
+        for i, row in df.iterrows():
             audio_path = audio_dir / row["speaker"] / f'{row["filename"]}.wav'
             video_path = video_dir / row["speaker"] / f'{row["filename"]}.mp4'
             if (not audio_path.exists()) or (not video_path.exists()):
@@ -42,8 +41,7 @@ class BaseDataModule(L.LightningDataModule):
         df = df.loc[df["data_split"] == data_split]
         audio_dir = Path(self.cfg["path"]["hifi_captain"]["data_dir"]).expanduser()
         data_path_list = []
-        for i in range(df.shape[0]):
-            row = df.iloc[i]
+        for i, row in df.iterrows():
             audio_path = (
                 audio_dir
                 / row["speaker"]
@@ -67,8 +65,7 @@ class BaseDataModule(L.LightningDataModule):
         df = df.loc[df["data_split"] == data_split]
         audio_dir = Path(self.cfg["path"]["jvs"]["data_dir"]).expanduser()
         data_path_list = []
-        for i in range(df.shape[0]):
-            row = df.iloc[i]
+        for i, row in df.iterrows():
             audio_path = (
                 audio_dir
                 / row["speaker"]
