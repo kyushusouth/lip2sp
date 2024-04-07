@@ -117,7 +117,7 @@ class BaseTransform:
 
         return lip
 
-    def stacker(self, feats: np.ndarray, stack_order: int) -> np.ndarray:
+    def stacker(self, feats: torch.Tensor, stack_order: int) -> torch.Tensor:
         """
         Concatenating consecutive audio frames
         Args:
@@ -126,6 +126,7 @@ class BaseTransform:
         Returns:
         feats - numpy.ndarray of shape [T', F']
         """
+        feats = feats.numpy()
         feat_dim = feats.shape[1]
         if len(feats) % stack_order != 0:
             res = stack_order - len(feats) % stack_order
@@ -134,6 +135,7 @@ class BaseTransform:
         feats = feats.reshape((-1, stack_order, feat_dim)).reshape(
             -1, stack_order * feat_dim
         )
+        feats = torch.from_numpy(feats)
         return feats
 
     def __call__(
