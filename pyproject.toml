@@ -94,6 +94,7 @@ mecab-python3 = "^1.0.8"
 jiwer = "^3.0.3"
 unidic = "^1.1.0"
 pydub = "^0.25.1"
+transformers = "^4.39.3"
 
 
 [build-system]
