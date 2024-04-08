@@ -166,7 +166,7 @@ class Generator(torch.nn.Module):
         self.num_upsamples = len(cfg["model"]["hifigan"]["upsample_rates"])
         self.conv_pre = weight_norm(
             Conv1d(
-                getattr(cfg, "model_in_dim", 128),
+                cfg["model"]["hifigan"]["model_in_dim"],
                 cfg["model"]["hifigan"]["upsample_initial_channel"],
                 7,
                 1,
@@ -174,7 +174,7 @@ class Generator(torch.nn.Module):
             )
         )
         resblock = (
-            ResBlock1 if cfg["model"]["higigan"]["resblock"] == "1" else ResBlock2
+            ResBlock1 if cfg["model"]["hifigan"]["resblock"] == "1" else ResBlock2
         )
 
         self.ups = nn.ModuleList()
@@ -217,8 +217,8 @@ class Generator(torch.nn.Module):
         x: (B, C, T) or (B, T)
         spk_emb: (B, C)
         """
-        x = self.emb(x)
-        x = torch.cat([x, spk_emb.unsqueeze(2)], dim=1)
+        x = self.emb(x).permute(0, 2, 1)
+        x = torch.cat([x, spk_emb.unsqueeze(2).expand(-1, -1, x.shape[2])], dim=1)
         x = self.conv_pre(x)
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, LRELU_SLOPE)
@@ -404,37 +404,3 @@ class MultiScaleDiscriminator(torch.nn.Module):
             fmap_gs.append(fmap_g)
 
         return y_d_rs, y_d_gs, fmap_rs, fmap_gs
-
-
-def feature_loss(fmap_r, fmap_g):
-    loss = 0
-    for dr, dg in zip(fmap_r, fmap_g):
-        for rl, gl in zip(dr, dg):
-            loss += torch.mean(torch.abs(rl - gl))
-
-    return loss * 2
-
-
-def discriminator_loss(disc_real_outputs, disc_generated_outputs):
-    loss = 0
-    r_losses = []
-    g_losses = []
-    for dr, dg in zip(disc_real_outputs, disc_generated_outputs):
-        r_loss = torch.mean((1 - dr) ** 2)
-        g_loss = torch.mean(dg**2)
-        loss += r_loss + g_loss
-        r_losses.append(r_loss.item())
-        g_losses.append(g_loss.item())
-
-    return loss, r_losses, g_losses
-
-
-def generator_loss(disc_outputs):
-    loss = 0
-    gen_losses = []
-    for dg in disc_outputs:
-        l = torch.mean((1 - dg) ** 2)
-        gen_losses.append(l)
-        loss += l
-
-    return loss, gen_losses
