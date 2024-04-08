@@ -1,4 +1,3 @@
-import pickle
 from pathlib import Path
 
 import lightning as L
@@ -13,7 +12,6 @@ from cosine_annealing_warmup import CosineAnnealingWarmupRestarts
 from jiwer import wer
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
-from transformers import AutoModel
 
 from src.log_fn.save_loss import save_epoch_loss_plot
 from src.log_fn.save_sample import save_mel
@@ -43,14 +41,6 @@ class LitBaseModel(L.LightningModule):
         )
         self.pwg.eval()
 
-        model_name = "rinna/japanese-hubert-base"
-        self.hubert = AutoModel.from_pretrained(model_name)
-        self.hubert.eval()
-
-        with open("/home/minami/lip2sp/src/test/kmeans.pickle", "rb") as f:
-            kmeans = pickle.load(f)
-        self.kmeans = kmeans
-
     def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
         (
             wav,
@@ -63,7 +53,7 @@ class LitBaseModel(L.LightningModule):
             speaker,
             filename,
         ) = batch
-        pred, pred_cls, pred_reg = self.model(
+        pred = self.model(
             lip=lip,
             audio=None,
             lip_len=lip_len,
@@ -71,41 +61,11 @@ class LitBaseModel(L.LightningModule):
         )
         loss = self.loss_fn.mae_loss(pred, feature, feature_len, max_len=pred.shape[-1])
 
-        wav_pad = torch.nn.functional.pad(
-            wav,
-            (0, self.cfg["data"]["audio"]["sr"] // 100 * 2),
-            mode="constant",
-            value=0,
-        )
-        with torch.no_grad():
-            hubert_feature = self.hubert(wav_pad).last_hidden_state  # (B, T, C)
-        hubert_feature_cluster_list = []
-        for i in range(self.cfg["training"]["params"]["batch_size"]):
-            hubert_feature_cluster_pred = self.kmeans.predict(
-                hubert_feature[i].cpu().numpy()
-            )
-            hubert_feature_cluster_list.append(
-                torch.from_numpy(hubert_feature_cluster_pred)
-            )
-        hubert_feature_cluster = torch.stack(hubert_feature_cluster_list, dim=0).to(
-            dtype=torch.long, device=self.device
-        )
-
-        hubert_cls_loss = torch.nn.functional.cross_entropy(
-            pred_cls, hubert_feature_cluster
-        )
-        hubert_reg_loss = torch.nn.functional.l1_loss(
-            pred_reg.permute(0, 2, 1), hubert_feature
-        )
-
-        loss += hubert_reg_loss
-        loss += hubert_cls_loss
-
         self.log(
             "train_loss",
             loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.train_step_loss_list.append(loss.item())
         self.train_mel_example["gt"] = (
@@ -140,7 +100,7 @@ class LitBaseModel(L.LightningModule):
             "val_loss",
             loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.val_step_loss_list.append(loss.item())
         self.val_mel_example["gt"] = (
@@ -395,46 +355,25 @@ class LitBaseModel(L.LightningModule):
         return wer_gt
 
     def configure_optimizers(self):
-        optimizer = None
-        scheduler = None
-
-        if self.cfg["training"]["optimizer"]["type"] == "adam":
-            optimizer = torch.optim.Adam(
-                params=self.model.parameters(),
-                lr=self.learning_rate,
-                betas=(
-                    self.cfg["training"]["optimizer"]["beta_1"],
-                    self.cfg["training"]["optimizer"]["beta_2"],
-                ),
-                weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
-            )
-        elif self.cfg["training"]["optimizer"]["type"] == "adamw":
-            optimizer = torch.optim.AdamW(
-                params=self.model.parameters(),
-                lr=self.learning_rate,
-                betas=(
-                    self.cfg["training"]["optimizer"]["beta_1"],
-                    self.cfg["training"]["optimizer"]["beta_2"],
-                ),
-                weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
-            )
-        if optimizer is None:
-            raise ValueError("Not supported optimizer")
-
-        if self.cfg["training"]["scheduler"]["type"] == "cawr":
-            scheduler = CosineAnnealingWarmupRestarts(
-                optimizer=optimizer,
-                first_cycle_steps=self.cfg["training"]["params"]["max_epoch"],
-                cycle_mult=self.cfg["training"]["scheduler"]["cycle_mult"],
-                max_lr=self.cfg["training"]["optimizer"]["learning_rate"],
-                min_lr=self.cfg["training"]["scheduler"]["min_lr"],
-                warmup_steps=self.cfg["training"]["params"]["max_epoch"]
-                * self.cfg["training"]["scheduler"]["warmup_steps"],
-                gamma=self.cfg["training"]["scheduler"]["gamma"],
-            )
-        if scheduler is None:
-            raise ValueError("Not supported scheduler")
-
+        optimizer = torch.optim.AdamW(
+            params=self.model.parameters(),
+            lr=self.learning_rate,
+            betas=(
+                self.cfg["training"]["optimizer"]["beta_1"],
+                self.cfg["training"]["optimizer"]["beta_2"],
+            ),
+            weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
+        )
+        scheduler = CosineAnnealingWarmupRestarts(
+            optimizer=optimizer,
+            first_cycle_steps=self.cfg["training"]["max_epoch"],
+            cycle_mult=self.cfg["training"]["scheduler"]["cycle_mult"],
+            max_lr=self.cfg["training"]["optimizer"]["learning_rate"],
+            min_lr=self.cfg["training"]["scheduler"]["min_lr"],
+            warmup_steps=self.cfg["training"]["max_epoch"]
+            * self.cfg["training"]["scheduler"]["warmup_steps"],
+            gamma=self.cfg["training"]["scheduler"]["gamma"],
+        )
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
