@@ -24,7 +24,7 @@ class STFTLoss:
         imag = stft[..., 1]
         spec_mag = torch.sqrt(torch.clamp(real**2 + imag**2, min=1e-7)).transpose(2, 1)
         return spec_mag
-    
+
     def SpectralConvergenceLoss(self, x_mag, x_pred_mag):
         return torch.norm(x_pred_mag - x_mag, p="fro") / torch.norm(x_pred_mag, p="fro")
 
@@ -44,10 +44,10 @@ class STFTLoss:
 class MultiResolutionSTFTLoss:
     def __init__(self, n_fft_list, hop_length_list, win_length_list, device):
         stft_losses = []
-        for n_fft, hop_length, win_length in zip(n_fft_list, hop_length_list, win_length_list):
-            stft_losses.append(
-                STFTLoss(n_fft, hop_length, win_length, device)
-            )
+        for n_fft, hop_length, win_length in zip(
+            n_fft_list, hop_length_list, win_length_list
+        ):
+            stft_losses.append(STFTLoss(n_fft, hop_length, win_length, device))
         self.stft_losses = stft_losses
 
     def calc_loss(self, x, x_pred):

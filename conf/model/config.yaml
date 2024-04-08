@@ -3,6 +3,7 @@ defaults:
   - raven: base
   - vatlm: base
   - pwg: base
+  - hifigan: base
   - decoder: config
 
 ssl_type: avhubert

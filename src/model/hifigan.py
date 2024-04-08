@@ -18,9 +18,9 @@ def init_weights(m, mean=0.0, std=0.01):
 
 
 class ResBlock1(torch.nn.Module):
-    def __init__(self, h, channels, kernel_size=3, dilation=(1, 3, 5)):
+    def __init__(self, cfg, channels, kernel_size=3, dilation=(1, 3, 5)):
         super(ResBlock1, self).__init__()
-        self.h = h
+        self.cfg = cfg
         self.convs1 = nn.ModuleList(
             [
                 weight_norm(
@@ -110,9 +110,9 @@ class ResBlock1(torch.nn.Module):
 
 
 class ResBlock2(torch.nn.Module):
-    def __init__(self, h, channels, kernel_size=3, dilation=(1, 3)):
+    def __init__(self, cfg, channels, kernel_size=3, dilation=(1, 3)):
         super(ResBlock2, self).__init__()
-        self.h = h
+        self.cfg = cfg
         self.convs = nn.ModuleList(
             [
                 weight_norm(
@@ -152,29 +152,44 @@ class ResBlock2(torch.nn.Module):
 
 
 class Generator(torch.nn.Module):
-    def __init__(self, h):
+    def __init__(self, cfg):
         super(Generator, self).__init__()
-        self.h = h
-        self.num_kernels = len(h.resblock_kernel_sizes)
-        self.num_upsamples = len(h.upsample_rates)
+        self.cfg = cfg
+
+        if cfg["model"]["hifigan"]["is_discrete_input"]:
+            self.emb = nn.Embedding(
+                cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1,
+                cfg["model"]["hifigan"]["embedding_dim"],
+            )
+
+        self.num_kernels = len(cfg["model"]["hifigan"]["resblock_kernel_sizes"])
+        self.num_upsamples = len(cfg["model"]["hifigan"]["upsample_rates"])
         self.conv_pre = weight_norm(
             Conv1d(
-                getattr(h, "model_in_dim", 128),
-                h.upsample_initial_channel,
+                getattr(cfg, "model_in_dim", 128),
+                cfg["model"]["hifigan"]["upsample_initial_channel"],
                 7,
                 1,
                 padding=3,
             )
         )
-        resblock = ResBlock1 if h.resblock == "1" else ResBlock2
+        resblock = (
+            ResBlock1 if cfg["model"]["higigan"]["resblock"] == "1" else ResBlock2
+        )
 
         self.ups = nn.ModuleList()
-        for i, (u, k) in enumerate(zip(h.upsample_rates, h.upsample_kernel_sizes)):
+        for i, (u, k) in enumerate(
+            zip(
+                cfg["model"]["hifigan"]["upsample_rates"],
+                cfg["model"]["hifigan"]["upsample_kernel_sizes"],
+            )
+        ):
             self.ups.append(
                 weight_norm(
                     ConvTranspose1d(
-                        h.upsample_initial_channel // (2**i),
-                        h.upsample_initial_channel // (2 ** (i + 1)),
+                        cfg["model"]["hifigan"]["upsample_initial_channel"] // (2**i),
+                        cfg["model"]["hifigan"]["upsample_initial_channel"]
+                        // (2 ** (i + 1)),
                         k,
                         u,
                         padding=(k - u) // 2,
@@ -184,17 +199,26 @@ class Generator(torch.nn.Module):
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
-            ch = h.upsample_initial_channel // (2 ** (i + 1))
+            ch = cfg["model"]["hifigan"]["upsample_initial_channel"] // (2 ** (i + 1))
             for j, (k, d) in enumerate(
-                zip(h.resblock_kernel_sizes, h.resblock_dilation_sizes)
+                zip(
+                    cfg["model"]["hifigan"]["resblock_kernel_sizes"],
+                    cfg["model"]["hifigan"]["resblock_dilation_sizes"],
+                )
             ):
-                self.resblocks.append(resblock(h, ch, k, d))
+                self.resblocks.append(resblock(cfg, ch, k, d))
 
         self.conv_post = weight_norm(Conv1d(ch, 1, 7, 1, padding=3))
         self.ups.apply(init_weights)
         self.conv_post.apply(init_weights)
 
-    def forward(self, x):
+    def forward(self, x, spk_emb):
+        """
+        x: (B, C, T) or (B, T)
+        spk_emb: (B, C)
+        """
+        x = self.emb(x)
+        x = torch.cat([x, spk_emb.unsqueeze(2)], dim=1)
         x = self.conv_pre(x)
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, LRELU_SLOPE)
@@ -209,7 +233,6 @@ class Generator(torch.nn.Module):
         x = F.leaky_relu(x)
         x = self.conv_post(x)
         x = torch.tanh(x)
-
         return x
 
     def remove_weight_norm(self):
@@ -219,121 +242,6 @@ class Generator(torch.nn.Module):
             l.remove_weight_norm()
         remove_weight_norm(self.conv_pre)
         remove_weight_norm(self.conv_post)
-
-
-class CodeGenerator(Generator):
-    def __init__(self, h):
-        super().__init__(h)
-        self.dict = nn.Embedding(h.num_embeddings, h.embedding_dim)
-        self.f0 = h.get("f0", None)
-        self.multispkr = h.get("multispkr", None)
-
-        if self.multispkr:
-            self.spkr = nn.Embedding(200, h.embedding_dim)
-
-        self.encoder = None
-        self.vq = None
-        if h.get("lambda_commit", None):
-            assert self.f0, "Requires F0 set"
-            self.encoder = Encoder(**h.f0_encoder_params)
-            self.vq = Bottleneck(**h.f0_vq_params)
-
-        self.code_encoder = None
-        self.code_vq = None
-        if h.get("lambda_commit_code", None):
-            self.code_encoder = Encoder(**h.code_encoder_params)
-            self.code_vq = Bottleneck(**h.code_vq_params)
-            self.dict = None
-
-        self.quantizer = None
-        if h.get("f0_quantizer_path", None):
-            assert self.f0, "Requires F0 set"
-            self.quantizer = Quantizer(AttrDict(h.f0_quantizer))
-            quantizer_state = torch.load(h.f0_quantizer_path, map_location="cpu")
-            self.quantizer.load_state_dict(quantizer_state["generator"])
-            self.quantizer.eval()
-            self.f0_dict = nn.Embedding(
-                h.f0_quantizer["f0_vq_params"]["l_bins"], h.embedding_dim
-            )
-
-    @staticmethod
-    def _upsample(signal, max_frames):
-        if signal.dim() == 3:
-            bsz, channels, cond_length = signal.size()
-        elif signal.dim() == 2:
-            signal = signal.unsqueeze(2)
-            bsz, channels, cond_length = signal.size()
-        else:
-            signal = signal.view(-1, 1, 1)
-            bsz, channels, cond_length = signal.size()
-
-        signal = signal.unsqueeze(3).repeat(1, 1, 1, max_frames // cond_length)
-
-        # pad zeros as needed (if signal's shape does not divide completely with max_frames)
-        reminder = (max_frames - signal.shape[2] * signal.shape[3]) // signal.shape[3]
-        if reminder > 0:
-            raise NotImplementedError(
-                "Padding condition signal - misalignment between condition features."
-            )
-
-        signal = signal.view(bsz, channels, max_frames)
-        return signal
-
-    def forward(self, **kwargs):
-        code_commit_losses = None
-        code_metrics = None
-        if self.code_vq and kwargs["code"].dtype is torch.int64:
-            x = self.code_vq.level_blocks[0].k[kwargs["code"]].transpose(1, 2)
-        elif self.code_vq:
-            code_h = self.code_encoder(kwargs["code"])
-            _, code_h_q, code_commit_losses, code_metrics = self.code_vq(code_h)
-            x = code_h_q[0]
-        else:
-            x = self.dict(kwargs["code"]).transpose(1, 2)
-
-        f0_commit_losses = None
-        f0_metrics = None
-        if self.vq:
-            f0_h = self.encoder(kwargs["f0"])
-            _, f0_h_q, f0_commit_losses, f0_metrics = self.vq(f0_h)
-            kwargs["f0"] = f0_h_q[0]
-        elif self.quantizer:
-            self.quantizer.eval()
-            assert not self.quantizer.training, "VQ is in training status!!!"
-            f0_h = self.quantizer.encoder(kwargs["f0"])
-            f0_h = [x.detach() for x in f0_h]
-            zs, _, _, _ = self.quantizer.vq(f0_h)
-            zs = [x.detach() for x in zs]
-            f0_h_q = self.f0_dict(zs[0].detach()).transpose(1, 2)
-            kwargs["f0"] = f0_h_q
-
-        if self.f0:
-            if x.shape[-1] < kwargs["f0"].shape[-1]:
-                x = self._upsample(x, kwargs["f0"].shape[-1])
-            else:
-                kwargs["f0"] = self._upsample(kwargs["f0"], x.shape[-1])
-            x = torch.cat([x, kwargs["f0"]], dim=1)
-
-        if self.multispkr:
-            spkr = self.spkr(kwargs["spkr"]).transpose(1, 2)
-            spkr = self._upsample(spkr, x.shape[-1])
-            x = torch.cat([x, spkr], dim=1)
-
-        for k, feat in kwargs.items():
-            if k in ["spkr", "code", "f0"]:
-                continue
-
-            feat = self._upsample(feat, x.shape[-1])
-            x = torch.cat([x, feat], dim=1)
-
-        if self.vq or self.code_vq:
-            return (
-                super().forward(x),
-                (code_commit_losses, f0_commit_losses),
-                (code_metrics, f0_metrics),
-            )
-        else:
-            return super().forward(x)
 
 
 class DiscriminatorP(torch.nn.Module):
@@ -496,22 +404,6 @@ class MultiScaleDiscriminator(torch.nn.Module):
             fmap_gs.append(fmap_g)
 
         return y_d_rs, y_d_gs, fmap_rs, fmap_gs
-
-
-class Quantizer(nn.Module):
-    def __init__(self, h):
-        super().__init__()
-
-        self.encoder = Encoder(**h.f0_encoder_params)
-        self.vq = Bottleneck(**h.f0_vq_params)
-        self.decoder = Decoder(**h.f0_decoder_params)
-
-    def forward(self, **kwargs):
-        f0_h = self.encoder(kwargs["f0"])
-        _, f0_h_q, f0_commit_losses, f0_metrics = self.vq(f0_h)
-        f0 = self.decoder(f0_h_q)
-
-        return f0, f0_commit_losses, f0_metrics
 
 
 def feature_loss(fmap_r, fmap_g):
