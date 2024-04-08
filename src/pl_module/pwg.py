@@ -28,9 +28,9 @@ class LitPWG(L.LightningModule):
         self.generator = Generator(cfg)
         self.discriminator = Discriminator(cfg)
         self.loss_fn = MultiResolutionSTFTLoss(
-            n_fft_list=cfg["training"]["params"]["n_fft_list"],
-            hop_length_list=cfg["training"]["params"]["hop_length_list"],
-            win_length_list=cfg["training"]["params"]["win_length_list"],
+            n_fft_list=cfg["model"]["pwg"]["loss"]["n_fft_list"],
+            hop_length_list=cfg["model"]["pwg"]["loss"]["hop_length_list"],
+            win_length_list=cfg["model"]["pwg"]["loss"]["win_length_list"],
             device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         )
 
@@ -94,8 +94,8 @@ class LitPWG(L.LightningModule):
         loss_gen_stft = self.loss_fn.calc_loss(wav, wav_pred)
         loss_gen_gan = torch.mean((out_pred - 1) ** 2)
         loss_gen_all = (
-            self.cfg["training"]["params"]["stft_loss_weight"] * loss_gen_stft
-            + self.cfg["training"]["params"]["gan_loss_weight"] * loss_gen_gan
+            self.cfg["training"]["stft_loss_weight"] * loss_gen_stft
+            + self.cfg["training"]["gan_loss_weight"] * loss_gen_gan
         )
         self.manual_backward(loss_gen_all)
         opt_g.step()
@@ -106,25 +106,25 @@ class LitPWG(L.LightningModule):
             "train_loss_disc",
             loss_disc,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "train_loss_gen_stft",
             loss_gen_stft,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "train_loss_gen_gan",
             loss_gen_gan,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "train_loss_gen_all",
             loss_gen_all,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.train_step_loss_disc_list.append(loss_disc.item())
         self.train_step_loss_gen_stft_list.append(loss_gen_stft.item())
@@ -165,33 +165,33 @@ class LitPWG(L.LightningModule):
         loss_gen_stft = self.loss_fn.calc_loss(wav, wav_pred)
         loss_gen_gan = torch.mean((out_pred - 1) ** 2)
         loss_gen_all = (
-            self.cfg["training"]["params"]["stft_loss_weight"] * loss_gen_stft
-            + self.cfg["training"]["params"]["gan_loss_weight"] * loss_gen_gan
+            self.cfg["training"]["stft_loss_weight"] * loss_gen_stft
+            + self.cfg["training"]["gan_loss_weight"] * loss_gen_gan
         )
 
         self.log(
             "val_loss_disc",
             loss_disc,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "val_loss_gen_stft",
             loss_gen_stft,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "val_loss_gen_gan",
             loss_gen_gan,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "val_loss_gen_all",
             loss_gen_all,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.val_step_loss_disc_list.append(loss_disc.item())
         self.val_step_loss_gen_stft_list.append(loss_gen_stft.item())
@@ -208,7 +208,7 @@ class LitPWG(L.LightningModule):
         sch_g, sch_d = self.lr_schedulers()
         sch_g.step()
         sch_d.step()
-        
+
         self.train_epoch_loss_disc_list.append(np.mean(self.train_step_loss_disc_list))
         self.train_epoch_loss_gen_stft_list.append(
             np.mean(self.train_step_loss_gen_stft_list)

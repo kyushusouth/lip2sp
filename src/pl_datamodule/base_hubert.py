@@ -15,7 +15,7 @@ class BaseHuBERTDataModule(L.LightningDataModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.batch_size = cfg["training"]["params"]["batch_size"]
+        self.batch_size = cfg["training"]["batch_size"]
 
     def get_kablab_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
@@ -299,7 +299,7 @@ class BaseHuBERTDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.train_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["params"]["num_workers"],
+            num_workers=self.cfg["training"]["num_workers"],
             shuffle=True,
             pin_memory=True,
             drop_last=False,
@@ -310,7 +310,7 @@ class BaseHuBERTDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["params"]["num_workers"],
+            num_workers=self.cfg["training"]["num_workers"],
             shuffle=False,
             pin_memory=True,
             drop_last=False,

@@ -15,7 +15,7 @@ class BaseDataModule(L.LightningDataModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.batch_size = cfg["training"]["params"]["batch_size"]
+        self.batch_size = cfg["training"]["batch_size"]
 
     def get_kablab_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
@@ -85,6 +85,24 @@ class BaseDataModule(L.LightningDataModule):
             )
         return data_path_list
 
+    def get_jsut_path_list(self, df: pd.DataFrame, data_split: str) -> list:
+        df = df.loc[df["data_split"] == data_split]
+        audio_dir = Path(self.cfg["path"]["jsut"]["audio_dir"]).expanduser()
+        data_path_list = []
+        for i, row in df.iterrows():
+            audio_path = audio_dir / row["dirname"] / "wav" / f'{row["filename"]}.wav'
+            if not audio_path.exists():
+                continue
+            data_path_list.append(
+                {
+                    "audio_path": audio_path,
+                    "video_path": None,
+                    "speaker": "female",
+                    "filename": row["filename"],
+                }
+            )
+        return data_path_list
+
     def setup(self, stage: str) -> None:
         train_data_path_list = []
         val_data_path_list = []
@@ -113,6 +131,13 @@ class BaseDataModule(L.LightningDataModule):
             train_data_path_list += self.get_jvs_path_list(df, "train")
             val_data_path_list += self.get_jvs_path_list(df, "val")
             test_data_path_list += self.get_jvs_path_list(df, "test")
+        if self.cfg["data_choice"]["jsut"]["use"]:
+            df = pd.read_csv(
+                str(Path(self.cfg["path"]["jsut"]["df_path"]).expanduser())
+            )
+            train_data_path_list += self.get_jsut_path_list(df, "train")
+            val_data_path_list += self.get_jsut_path_list(df, "val")
+            test_data_path_list += self.get_jsut_path_list(df, "test")
 
         if stage == "fit":
             self.train_dataset = BaseDataset(
@@ -136,7 +161,7 @@ class BaseDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.train_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["params"]["num_workers"],
+            num_workers=self.cfg["training"]["num_workers"],
             shuffle=True,
             pin_memory=True,
             drop_last=False,
@@ -147,7 +172,7 @@ class BaseDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["params"]["num_workers"],
+            num_workers=self.cfg["training"]["num_workers"],
             shuffle=False,
             pin_memory=True,
             drop_last=False,

@@ -32,7 +32,7 @@ def adjust_seq_lengths(batch: list, cfg: omegaconf.DictConfig) -> tuple:
     feature_hubert_cluster_adjusted = []
 
     lip_input_len = int(
-        cfg["training"]["params"]["input_sec"] * cfg["data"]["video"]["fps"]
+        cfg["training"]["input_sec"] * cfg["data"]["video"]["fps"]
     )
     upsample = get_upsample(cfg)
     feat_input_len = int(lip_input_len * upsample)

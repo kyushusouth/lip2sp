@@ -122,31 +122,31 @@ class LitBaseHuBERTModel(L.LightningModule):
             "train_conv_output_mel_loss",
             conv_output_mel_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "train_conv_output_hubert_prj_loss",
             conv_output_hubert_prj_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "train_hubert_output_reg_loss",
             hubert_output_reg_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "train_hubert_output_cls_loss",
             hubert_output_cls_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "train_loss",
             loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
 
         self.train_step_conv_output_mel_loss_list.append(conv_output_mel_loss.item())
@@ -232,31 +232,31 @@ class LitBaseHuBERTModel(L.LightningModule):
             "val_conv_output_mel_loss",
             conv_output_mel_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "val_conv_output_hubert_prj_loss",
             conv_output_hubert_prj_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "val_hubert_output_reg_loss",
             hubert_output_reg_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "val_hubert_output_cls_loss",
             hubert_output_cls_loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
             "val_loss",
             loss,
             logger=True,
-            batch_size=self.cfg["training"]["params"]["batch_size"],
+            batch_size=self.cfg["training"]["batch_size"],
         )
 
         self.val_step_conv_output_mel_loss_list.append(conv_output_mel_loss.item())
@@ -576,46 +576,25 @@ class LitBaseHuBERTModel(L.LightningModule):
         return wer_gt
 
     def configure_optimizers(self):
-        optimizer = None
-        scheduler = None
-
-        if self.cfg["training"]["optimizer"]["type"] == "adam":
-            optimizer = torch.optim.Adam(
-                params=self.model.parameters(),
-                lr=self.learning_rate,
-                betas=(
-                    self.cfg["training"]["optimizer"]["beta_1"],
-                    self.cfg["training"]["optimizer"]["beta_2"],
-                ),
-                weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
-            )
-        elif self.cfg["training"]["optimizer"]["type"] == "adamw":
-            optimizer = torch.optim.AdamW(
-                params=self.model.parameters(),
-                lr=self.learning_rate,
-                betas=(
-                    self.cfg["training"]["optimizer"]["beta_1"],
-                    self.cfg["training"]["optimizer"]["beta_2"],
-                ),
-                weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
-            )
-        if optimizer is None:
-            raise ValueError("Not supported optimizer")
-
-        if self.cfg["training"]["scheduler"]["type"] == "cawr":
-            scheduler = CosineAnnealingWarmupRestarts(
-                optimizer=optimizer,
-                first_cycle_steps=self.cfg["training"]["params"]["max_epoch"],
-                cycle_mult=self.cfg["training"]["scheduler"]["cycle_mult"],
-                max_lr=self.cfg["training"]["optimizer"]["learning_rate"],
-                min_lr=self.cfg["training"]["scheduler"]["min_lr"],
-                warmup_steps=self.cfg["training"]["params"]["max_epoch"]
-                * self.cfg["training"]["scheduler"]["warmup_steps"],
-                gamma=self.cfg["training"]["scheduler"]["gamma"],
-            )
-        if scheduler is None:
-            raise ValueError("Not supported scheduler")
-
+        optimizer = torch.optim.AdamW(
+            params=self.model.parameters(),
+            lr=self.learning_rate,
+            betas=(
+                self.cfg["training"]["optimizer"]["beta_1"],
+                self.cfg["training"]["optimizer"]["beta_2"],
+            ),
+            weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
+        )
+        scheduler = CosineAnnealingWarmupRestarts(
+            optimizer=optimizer,
+            first_cycle_steps=self.cfg["training"]["max_epoch"],
+            cycle_mult=self.cfg["training"]["scheduler"]["cycle_mult"],
+            max_lr=self.cfg["training"]["optimizer"]["learning_rate"],
+            min_lr=self.cfg["training"]["scheduler"]["min_lr"],
+            warmup_steps=self.cfg["training"]["max_epoch"]
+            * self.cfg["training"]["scheduler"]["warmup_steps"],
+            gamma=self.cfg["training"]["scheduler"]["gamma"],
+        )
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
