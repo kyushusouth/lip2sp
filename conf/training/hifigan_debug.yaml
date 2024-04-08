@@ -1,34 +1,33 @@
 max_epoch: 3
-batch_size: 4
-num_workers: 4
-input_sec: 10
+batch_size: 16
+num_workers: 16
+input_sec: 1
 seed: 42
-monitoring_metric: "val_loss"
+monitoring_metric: "val_loss_gen_all"
 monitoring_mode: "min"
-early_stopping_patience: 10
+early_stopping_patience: 40
 save_checkpoint_every_n_epochs: 1
 save_checkpoint_top_k: 1
-limit_train_batches: 0.2
-limit_val_batches: 0.2
-limit_test_batches: 0.2
+limit_train_batches: 0.1
+limit_val_batches: 0.1
+limit_test_batches: 0.1
 log_every_n_steps: 10
 precision: "16-mixed"
-accumulate_grad_batches: 8
+accumulate_grad_batches: 1
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
 checkpoints_save_dir: "~/lip2sp/checkpoints/debug"
 finetune: false
 finetune_start_model_path:
 optimizer:
-  learning_rate: 1.0e-3
-  beta_1: 0.9
-  beta_2: 0.98
+  type: adamw
+  learning_rate: 2.0e-4
+  beta_1: 0.8
+  beta_2: 0.99
   weight_decay: 1.0e-2
 scheduler:
-  cycle_mult: 1.0
-  min_lr: 1.0e-6
-  warmup_steps: 0.1
-  gamma: 1.0
+  type: exp
+  gamma: 0.9
 wandb:
   project_name: "debug"
   default_root_dir: "./"
@@ -36,9 +35,9 @@ wandb:
   group_name:
 augs:
   random_crop:
-    use: true
+    use: false
   horizontal_flip:
-    use: true
+    use: false
   time_masking:
-    use: true
+    use: false
     max_masking_sec: 0.5

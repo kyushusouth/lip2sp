@@ -16,7 +16,7 @@ precision: "16-mixed"
 accumulate_grad_batches: 8
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
-checkpoints_save_dir: "~/lip2sp/checkpoints/base_hubert"
+checkpoints_save_dir: "~/lip2sp/checkpoints/base"
 finetune: false
 finetune_start_model_path:
 optimizer:
@@ -30,7 +30,7 @@ scheduler:
   warmup_steps: 0.1
   gamma: 1.0
 wandb:
-  project_name: "lip2sp-base_hubert"
+  project_name: "lip2sp-base"
   default_root_dir: "./"
   run_name:
   group_name:

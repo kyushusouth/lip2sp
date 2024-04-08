@@ -3,7 +3,7 @@ defaults:
   - model: config
   - path: config
   - data_choice: config
-  - training: base_hubert_debug
+  - training: hifigan
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
 
