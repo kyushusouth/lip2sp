@@ -6,30 +6,30 @@ from src.data_process.utils import get_upsample, get_upsample_hubert
 
 
 class ResBlock(nn.Module):
-    def __init__(self, hidden_channels: int, kernel_size: int, dropout: float) -> None:
+    def __init__(self, cfg: omegaconf.DictConfig, hidden_channels: int) -> None:
         super().__init__()
-        padding = (kernel_size - 1) // 2
+        padding = (cfg["model"]["decoder"]["conv"]["conv_kernel_size"] - 1) // 2
         self.conv_layers = nn.Sequential(
             nn.Conv1d(
                 hidden_channels,
                 hidden_channels,
-                kernel_size=kernel_size,
+                kernel_size=cfg["model"]["decoder"]["conv"]["conv_kernel_size"],
                 stride=1,
                 padding=padding,
             ),
             nn.BatchNorm1d(hidden_channels),
             nn.ReLU(),
-            nn.Dropout(dropout),
+            nn.Dropout(cfg["model"]["decoder"]["conv"]["dropout"]),
             nn.Conv1d(
                 hidden_channels,
                 hidden_channels,
-                kernel_size=kernel_size,
+                kernel_size=cfg["model"]["decoder"]["conv"]["conv_kernel_size"],
                 stride=1,
                 padding=padding,
             ),
             nn.BatchNorm1d(hidden_channels),
             nn.ReLU(),
-            nn.Dropout(dropout),
+            nn.Dropout(cfg["model"]["decoder"]["conv"]["dropout"]),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -50,9 +50,8 @@ class ConvDecoder(nn.Module):
         for i in range(cfg["model"]["decoder"]["conv"]["n_conv_layers"]):
             conv_layers.append(
                 ResBlock(
+                    cfg=cfg,
                     hidden_channels=hidden_channels,
-                    kernel_size=cfg["model"]["decoder"]["conv"]["conv_kernel_size"],
-                    dropout=cfg["model"]["decoder"]["conv"]["dropout"],
                 )
             )
         self.conv_layers = nn.ModuleList(conv_layers)
@@ -92,9 +91,8 @@ class ConvDecoderHuBERT(nn.Module):
         for i in range(cfg["model"]["decoder"]["conv"]["n_conv_layers"]):
             conv_layers.append(
                 ResBlock(
+                    cfg=cfg,
                     hidden_channels=hidden_channels,
-                    kernel_size=cfg["model"]["decoder"]["conv"]["conv_kernel_size"],
-                    dropout=cfg["model"]["decoder"]["conv"]["dropout"],
                 )
             )
         self.conv_layers = nn.ModuleList(conv_layers)
@@ -103,8 +101,17 @@ class ConvDecoderHuBERT(nn.Module):
             cfg["data"]["audio"]["n_mels"] * get_upsample(cfg),
             kernel_size=1,
         )
+        self.out_layer_hubert_cluster = nn.Conv1d(
+            hidden_channels,
+            (cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1)
+            * get_upsample_hubert(cfg),
+            kernel_size=1,
+        )
         self.out_layer_hubert_prj = nn.Conv1d(
-            hidden_channels, hidden_channels * get_upsample_hubert(cfg), kernel_size=1
+            hidden_channels,
+            cfg["model"]["decoder"]["hubert"]["encoder_output_dim"]
+            * get_upsample_hubert(cfg),
+            kernel_size=1,
         )
 
     def forward(
@@ -125,11 +132,22 @@ class ConvDecoderHuBERT(nn.Module):
         )
         output_mel = output_mel.permute(0, 2, 1)  # (B, C, T)
 
+        output_hubert_cluster = self.out_layer_hubert_cluster(x)
+        output_hubert_cluster = output_hubert_cluster.permute(0, 2, 1)  # (B, T, C)
+        output_hubert_cluster = output_hubert_cluster.reshape(
+            output_hubert_cluster.shape[0],
+            -1,
+            self.cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1,
+        )
+        output_hubert_cluster = output_hubert_cluster.permute(0, 2, 1)  # (B, C, T)
+
         output_hubert_prj = self.out_layer_hubert_prj(x)  # (B, C, T)
         output_hubert_prj = output_hubert_prj.permute(0, 2, 1)  # (B, T, C)
         output_hubert_prj = output_hubert_prj.reshape(
-            output_hubert_prj.shape[0], -1, self.hidden_channels
+            output_hubert_prj.shape[0],
+            -1,
+            self.cfg["model"]["decoder"]["hubert"]["encoder_output_dim"],
         )
         output_hubert_prj = output_hubert_prj.permute(0, 2, 1)  # (B, C, T)
 
-        return output_mel, output_hubert_prj
+        return output_mel, output_hubert_cluster, output_hubert_prj
