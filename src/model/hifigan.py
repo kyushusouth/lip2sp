@@ -156,7 +156,24 @@ class Generator(torch.nn.Module):
         super(Generator, self).__init__()
         self.cfg = cfg
 
-        if cfg["model"]["hifigan"]["is_discrete_input"]:
+        if cfg["model"]["hifigan"]["input"] not in [
+            "feature",
+            "feature_hubert_encoder",
+            "feature_hubert_cluster",
+        ]:
+            raise ValueError("hifigan input setting is not supported.")
+
+        if cfg["model"]["hifigan"]["input"] == "feature":
+            self.emb = nn.Linear(
+                int(cfg["data"]["audio"]["n_mels"] * 2),
+                cfg["model"]["hifigan"]["embedding_dim"],
+            )
+        elif cfg["model"]["hifigan"]["input"] == "feature_hubert_encoder":
+            self.emb = nn.Linear(
+                cfg["model"]["decoder"]["hubert"]["encoder_output_dim"],
+                cfg["model"]["hifigan"]["embedding_dim"],
+            )
+        elif cfg["model"]["hifigan"]["input"] == "feature_hubert_cluster":
             self.emb = nn.Embedding(
                 cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1,
                 cfg["model"]["hifigan"]["embedding_dim"],
@@ -212,12 +229,16 @@ class Generator(torch.nn.Module):
         self.ups.apply(init_weights)
         self.conv_post.apply(init_weights)
 
-    def forward(self, x, spk_emb):
+    def forward(
+        self, inputs_dict: dict[str, torch.Tensor], spk_emb: torch.Tensor
+    ) -> torch.Tensor:
         """
-        x: (B, C, T) or (B, T)
+        x: (B, T, C) or (B, T)
         spk_emb: (B, C)
         """
-        x = self.emb(x).permute(0, 2, 1)
+        x = self.emb(inputs_dict[self.cfg["model"]["hifigan"]["input"]]).permute(
+            0, 2, 1
+        )  # (B, C, T)
         x = torch.cat([x, spk_emb.unsqueeze(2).expand(-1, -1, x.shape[2])], dim=1)
         x = self.conv_pre(x)
         for i in range(self.num_upsamples):
