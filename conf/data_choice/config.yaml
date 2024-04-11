@@ -1,5 +1,5 @@
 kablab:
-  use: true
+  use: false
   speaker: ["F01_kablab", "M01_kablab"]
   corpus: ["ATR"]
 
@@ -10,4 +10,4 @@ hifi_captain:
   use: false
 
 jsut:
-  use: false
+  use: true

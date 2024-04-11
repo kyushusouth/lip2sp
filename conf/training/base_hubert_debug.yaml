@@ -19,6 +19,12 @@ gradient_clip_algorithm: "norm"
 checkpoints_save_dir: "~/lip2sp/checkpoints/debug"
 finetune: false
 finetune_start_model_path:
+loss_weights:
+  conv_output_mel_loss: 1
+  conv_output_hubert_cluster_loss: 0
+  conv_output_hubert_prj_loss: 0
+  hubert_output_reg_loss: 0
+  hubert_output_cls_loss: 0
 optimizer:
   learning_rate: 1.0e-3
   beta_1: 0.9
