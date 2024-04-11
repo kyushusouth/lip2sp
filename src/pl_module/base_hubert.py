@@ -36,21 +36,25 @@ class LitBaseHuBERTModel(L.LightningModule):
 
         self.train_step_loss_list = []
         self.train_step_conv_output_mel_loss_list = []
+        self.train_step_conv_output_hubert_cluster_loss_list = []
         self.train_step_conv_output_hubert_prj_loss_list = []
         self.train_step_hubert_output_reg_loss_list = []
         self.train_step_hubert_output_cls_loss_list = []
         self.train_epoch_loss_list = []
         self.train_epoch_conv_output_mel_loss_list = []
+        self.train_epoch_conv_output_hubert_cluster_loss_list = []
         self.train_epoch_conv_output_hubert_prj_loss_list = []
         self.train_epoch_hubert_output_reg_loss_list = []
         self.train_epoch_hubert_output_cls_loss_list = []
         self.val_step_loss_list = []
         self.val_step_conv_output_mel_loss_list = []
+        self.val_step_conv_output_hubert_cluster_loss_list = []
         self.val_step_conv_output_hubert_prj_loss_list = []
         self.val_step_hubert_output_reg_loss_list = []
         self.val_step_hubert_output_cls_loss_list = []
         self.val_epoch_loss_list = []
         self.val_epoch_conv_output_mel_loss_list = []
+        self.val_epoch_conv_output_hubert_cluster_loss_list = []
         self.val_epoch_conv_output_hubert_prj_loss_list = []
         self.val_epoch_hubert_output_reg_loss_list = []
         self.val_epoch_hubert_output_cls_loss_list = []
@@ -82,6 +86,7 @@ class LitBaseHuBERTModel(L.LightningModule):
         (
             conv_output_mel,
             conv_output_hubert_prj,
+            conv_output_hubert_cluster,
             hubert_output_reg,
             hubert_output_cls,
         ) = self.model(
@@ -93,6 +98,11 @@ class LitBaseHuBERTModel(L.LightningModule):
 
         conv_output_mel_loss = self.loss_fn.mae_loss(
             conv_output_mel, feature, feature_len, max_len=conv_output_mel.shape[-1]
+        )
+        conv_output_hubert_cluster_loss = torch.nn.functional.cross_entropy(
+            conv_output_hubert_cluster,
+            feature_hubert_cluster,
+            ignore_index=0,
         )
         conv_output_hubert_prj_loss = self.loss_fn.mae_loss(
             conv_output_hubert_prj,
@@ -112,15 +122,37 @@ class LitBaseHuBERTModel(L.LightningModule):
             ignore_index=0,
         )
         loss = (
-            conv_output_mel_loss
-            + conv_output_hubert_prj_loss
-            + hubert_output_reg_loss
-            + hubert_output_cls_loss
+            (
+                conv_output_mel_loss
+                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
+            )
+            + (
+                conv_output_hubert_cluster_loss
+                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
+            )
+            + (
+                conv_output_hubert_prj_loss
+                * self.cfg["training"]["loss_weights"]["conv_output_hubert_prj_loss"]
+            )
+            + (
+                hubert_output_reg_loss
+                * self.cfg["training"]["loss_weights"]["hubert_output_reg_loss"]
+            )
+            + (
+                hubert_output_cls_loss
+                * self.cfg["training"]["loss_weights"]["hubert_output_cls_loss"]
+            )
         )
 
         self.log(
             "train_conv_output_mel_loss",
             conv_output_mel_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "train_conv_output_hubert_cluster_loss",
+            conv_output_hubert_cluster_loss,
             logger=True,
             batch_size=self.cfg["training"]["batch_size"],
         )
@@ -150,6 +182,9 @@ class LitBaseHuBERTModel(L.LightningModule):
         )
 
         self.train_step_conv_output_mel_loss_list.append(conv_output_mel_loss.item())
+        self.train_step_conv_output_hubert_cluster_loss_list.append(
+            conv_output_hubert_cluster_loss.item()
+        )
         self.train_step_conv_output_hubert_prj_loss_list.append(
             conv_output_hubert_prj_loss.item()
         )
@@ -189,6 +224,7 @@ class LitBaseHuBERTModel(L.LightningModule):
         (
             conv_output_mel,
             conv_output_hubert_prj,
+            conv_output_hubert_cluster,
             hubert_output_reg,
             hubert_output_cls,
         ) = self.model(
@@ -201,36 +237,60 @@ class LitBaseHuBERTModel(L.LightningModule):
         conv_output_mel_loss = self.loss_fn.mae_loss(
             conv_output_mel, feature, feature_len, max_len=conv_output_mel.shape[-1]
         )
+        conv_output_hubert_cluster_loss = torch.nn.functional.cross_entropy(
+            conv_output_hubert_cluster,
+            feature_hubert_cluster,
+            ignore_index=0,
+        )
         conv_output_hubert_prj_loss = self.loss_fn.mae_loss(
             conv_output_hubert_prj,
             feature_hubert_prj,
             feature_len,
             max_len=conv_output_hubert_prj.shape[-1],
         )
-
         hubert_output_reg_loss = self.loss_fn.mae_loss(
             hubert_output_reg,
             feature_hubert_encoder,
             feature_hubert_len,
             max_len=hubert_output_reg.shape[-1],
         )
-
         hubert_output_cls_loss = torch.nn.functional.cross_entropy(
             hubert_output_cls,
             feature_hubert_cluster,
             ignore_index=0,
         )
-
         loss = (
-            conv_output_mel_loss
-            + conv_output_hubert_prj_loss
-            + hubert_output_reg_loss
-            + hubert_output_cls_loss
+            (
+                conv_output_mel_loss
+                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
+            )
+            + (
+                conv_output_hubert_cluster_loss
+                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
+            )
+            + (
+                conv_output_hubert_prj_loss
+                * self.cfg["training"]["loss_weights"]["conv_output_hubert_prj_loss"]
+            )
+            + (
+                hubert_output_reg_loss
+                * self.cfg["training"]["loss_weights"]["hubert_output_reg_loss"]
+            )
+            + (
+                hubert_output_cls_loss
+                * self.cfg["training"]["loss_weights"]["hubert_output_cls_loss"]
+            )
         )
 
         self.log(
             "val_conv_output_mel_loss",
             conv_output_mel_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "val_conv_output_hubert_cluster_loss",
+            conv_output_hubert_cluster_loss,
             logger=True,
             batch_size=self.cfg["training"]["batch_size"],
         )
@@ -260,6 +320,9 @@ class LitBaseHuBERTModel(L.LightningModule):
         )
 
         self.val_step_conv_output_mel_loss_list.append(conv_output_mel_loss.item())
+        self.val_step_conv_output_hubert_cluster_loss_list.append(
+            conv_output_hubert_cluster_loss.item()
+        )
         self.val_step_conv_output_hubert_prj_loss_list.append(
             conv_output_hubert_prj_loss.item()
         )
@@ -277,6 +340,9 @@ class LitBaseHuBERTModel(L.LightningModule):
     def on_validation_epoch_end(self) -> None:
         self.train_epoch_conv_output_mel_loss_list.append(
             np.mean(self.train_step_conv_output_mel_loss_list)
+        )
+        self.train_epoch_conv_output_hubert_cluster_loss_list.append(
+            np.mean(self.train_step_conv_output_hubert_cluster_loss_list)
         )
         self.train_epoch_conv_output_hubert_prj_loss_list.append(
             np.mean(self.train_step_conv_output_hubert_prj_loss_list)
@@ -296,6 +362,9 @@ class LitBaseHuBERTModel(L.LightningModule):
 
         self.val_epoch_conv_output_mel_loss_list.append(
             np.mean(self.val_step_conv_output_mel_loss_list)
+        )
+        self.val_epoch_conv_output_hubert_cluster_loss_list.append(
+            np.mean(self.val_step_conv_output_hubert_cluster_loss_list)
         )
         self.val_epoch_conv_output_hubert_prj_loss_list.append(
             np.mean(self.val_step_conv_output_hubert_prj_loss_list)
@@ -317,6 +386,11 @@ class LitBaseHuBERTModel(L.LightningModule):
             title="conv_output_mel_loss",
             train_loss_list=self.train_epoch_conv_output_mel_loss_list,
             val_loss_list=self.val_epoch_conv_output_mel_loss_list,
+        )
+        save_epoch_loss_plot(
+            title="conv_output_hubert_cluster_loss",
+            train_loss_list=self.train_epoch_conv_output_hubert_cluster_loss_list,
+            val_loss_list=self.val_epoch_conv_output_hubert_cluster_loss_list,
         )
         save_epoch_loss_plot(
             title="conv_output_hubert_prj_loss",
