@@ -30,40 +30,46 @@ class LitHiFiGANModel(L.LightningModule):
         self.mel_basis = None
         self.hann_window = None
 
-        self.train_step_loss_disc_f_list = []
-        self.train_step_loss_disc_s_list = []
-        self.train_step_loss_disc_all_list = []
-        self.train_step_loss_fm_f_list = []
-        self.train_step_loss_fm_s_list = []
-        self.train_step_loss_gen_f_list = []
-        self.train_step_loss_gen_s_list = []
-        self.train_step_loss_gen_all_list = []
-        self.val_step_loss_disc_f_list = []
-        self.val_step_loss_disc_s_list = []
-        self.val_step_loss_disc_all_list = []
-        self.val_step_loss_fm_f_list = []
-        self.val_step_loss_fm_s_list = []
-        self.val_step_loss_gen_f_list = []
-        self.val_step_loss_gen_s_list = []
-        self.val_step_loss_gen_all_list = []
-        self.train_epoch_loss_disc_f_list = []
-        self.train_epoch_loss_disc_s_list = []
-        self.train_epoch_loss_disc_all_list = []
-        self.train_epoch_loss_fm_f_list = []
-        self.train_epoch_loss_fm_s_list = []
-        self.train_epoch_loss_gen_f_list = []
-        self.train_epoch_loss_gen_s_list = []
-        self.train_epoch_loss_gen_all_list = []
-        self.val_epoch_loss_disc_f_list = []
-        self.val_epoch_loss_disc_s_list = []
-        self.val_epoch_loss_disc_all_list = []
-        self.val_epoch_loss_fm_f_list = []
-        self.val_epoch_loss_fm_s_list = []
-        self.val_epoch_loss_gen_f_list = []
-        self.val_epoch_loss_gen_s_list = []
-        self.val_epoch_loss_gen_all_list = []
-        self.train_wav_example = {"gt": None, "pred": None}
-        self.val_wav_example = {"gt": None, "pred": None}
+        self.train_step_loss_disc_f_list: list[float] = []
+        self.train_step_loss_disc_s_list: list[float] = []
+        self.train_step_loss_disc_all_list: list[float] = []
+        self.train_step_loss_fm_f_list: list[float] = []
+        self.train_step_loss_fm_s_list: list[float] = []
+        self.train_step_loss_gen_f_list: list[float] = []
+        self.train_step_loss_gen_s_list: list[float] = []
+        self.train_step_loss_gen_all_list: list[float] = []
+        self.val_step_loss_disc_f_list: list[float] = []
+        self.val_step_loss_disc_s_list: list[float] = []
+        self.val_step_loss_disc_all_list: list[float] = []
+        self.val_step_loss_fm_f_list: list[float] = []
+        self.val_step_loss_fm_s_list: list[float] = []
+        self.val_step_loss_gen_f_list: list[float] = []
+        self.val_step_loss_gen_s_list: list[float] = []
+        self.val_step_loss_gen_all_list: list[float] = []
+        self.train_epoch_loss_disc_f_list: list[float] = []
+        self.train_epoch_loss_disc_s_list: list[float] = []
+        self.train_epoch_loss_disc_all_list: list[float] = []
+        self.train_epoch_loss_fm_f_list: list[float] = []
+        self.train_epoch_loss_fm_s_list: list[float] = []
+        self.train_epoch_loss_gen_f_list: list[float] = []
+        self.train_epoch_loss_gen_s_list: list[float] = []
+        self.train_epoch_loss_gen_all_list: list[float] = []
+        self.val_epoch_loss_disc_f_list: list[float] = []
+        self.val_epoch_loss_disc_s_list: list[float] = []
+        self.val_epoch_loss_disc_all_list: list[float] = []
+        self.val_epoch_loss_fm_f_list: list[float] = []
+        self.val_epoch_loss_fm_s_list: list[float] = []
+        self.val_epoch_loss_gen_f_list: list[float] = []
+        self.val_epoch_loss_gen_s_list: list[float] = []
+        self.val_epoch_loss_gen_all_list: list[float] = []
+        self.train_wav_example: dict[str, np.ndarray] = {
+            "gt": np.random.rand(1),
+            "pred": np.random.rand(1),
+        }
+        self.val_wav_example: dict[str, np.ndarray] = {
+            "gt": np.random.rand(1),
+            "pred": np.random.rand(1),
+        }
 
     def forward(
         self, feature_hubert_cluster: torch.Tensor, spk_emb: torch.Tensor
@@ -158,8 +164,36 @@ class LitHiFiGANModel(L.LightningModule):
             loss += l
         return loss, gen_losses
 
+    def prepare_inputs_dict(
+        self, feature, feature_hubert_encoder, feature_hubert_cluster
+    ) -> dict[str, torch.Tensor]:
+        """
+        args:
+            feature: (B, C, T)
+            feature_hubert_encoder: (B, C, T)
+            feature_hubert_cluster: (B, T)
+        """
+        # メルスペクトログラムが100Hzである一方、hubert特徴量は50Hzになっている
+        # そのため、メルスペクトログラムについては連続した2つのフレームをチャンネル方向に積むことで、50Hzの特徴量として扱う
+        feature_inputs_dict = feature.permute(0, 2, 1)
+        feature_inputs_dict = feature_inputs_dict.reshape(
+            feature_inputs_dict.shape[0], feature_inputs_dict.shape[1] // 2, -1
+        )
+        inputs_dict = {
+            "feature": feature_inputs_dict,
+            "feature_hubert_encoder": feature_hubert_encoder.permute(0, 2, 1),
+            "feature_hubert_cluster": feature_hubert_cluster,
+        }
+        return inputs_dict
+
     def training_step(self, batch: list, batch_index: int) -> None:
-        optim_g, optim_d = self.optimizers()
+        optim_list = self.optimizers()
+        if not isinstance(optim_list, list):
+            raise ValueError(
+                "Optimizers must be provided for generator and discriminator."
+            )
+        optim_g = optim_list[0]
+        optim_d = optim_list[1]
 
         (
             wav,
@@ -179,7 +213,13 @@ class LitHiFiGANModel(L.LightningModule):
         wav = wav.unsqueeze(1)
         mel = self.wav2mel(wav)
 
-        wav_pred = self.gen(feature_hubert_cluster, spk_emb)
+        inputs_dict = self.prepare_inputs_dict(
+            feature=feature,
+            feature_hubert_encoder=feature_hubert_encoder,
+            feature_hubert_cluster=feature_hubert_cluster,
+        )
+
+        wav_pred = self.gen(inputs_dict, spk_emb)
         mel_pred = self.wav2mel(wav_pred)
 
         self.toggle_optimizer(optim_d)
@@ -293,7 +333,13 @@ class LitHiFiGANModel(L.LightningModule):
         wav = wav.unsqueeze(1)
         mel = self.wav2mel(wav)
 
-        wav_pred = self.gen(feature_hubert_cluster, spk_emb)
+        inputs_dict = self.prepare_inputs_dict(
+            feature=feature,
+            feature_hubert_encoder=feature_hubert_encoder,
+            feature_hubert_cluster=feature_hubert_cluster,
+        )
+
+        wav_pred = self.gen(inputs_dict, spk_emb)
         mel_pred = self.wav2mel(wav_pred)
 
         y_df_hat_r, y_df_hat_g, _, _ = self.mpd(wav, wav_pred.detach())
@@ -379,41 +425,61 @@ class LitHiFiGANModel(L.LightningModule):
         )
 
     def on_validation_epoch_end(self) -> None:
-        sch_g, sch_d = self.lr_schedulers()
-        sch_g.step()
-        sch_d.step()
+        scheduler_list = self.lr_schedulers()
+        if not isinstance(scheduler_list, list):
+            raise ValueError('Schedulers must be provided for generator and discriminator.')
+        scheduler_g = scheduler_list[0]
+        scheduler_d = scheduler_list[1]
+        scheduler_g.step()
+        scheduler_d.step()
 
         self.train_epoch_loss_disc_f_list.append(
-            np.mean(self.train_step_loss_disc_f_list)
+            np.mean(np.array(self.train_step_loss_disc_f_list))
         )
         self.train_epoch_loss_disc_s_list.append(
-            np.mean(self.train_step_loss_disc_s_list)
+            np.mean(np.array(self.train_step_loss_disc_s_list))
         )
         self.train_epoch_loss_disc_all_list.append(
-            np.mean(self.train_step_loss_disc_all_list)
+            np.mean(np.array(self.train_step_loss_disc_all_list))
         )
-        self.train_epoch_loss_fm_f_list.append(np.mean(self.train_step_loss_fm_f_list))
-        self.train_epoch_loss_fm_s_list.append(np.mean(self.train_step_loss_fm_s_list))
+        self.train_epoch_loss_fm_f_list.append(
+            np.mean(np.array(self.train_step_loss_fm_f_list))
+        )
+        self.train_epoch_loss_fm_s_list.append(
+            np.mean(np.array(self.train_step_loss_fm_s_list))
+        )
         self.train_epoch_loss_gen_f_list.append(
-            np.mean(self.train_step_loss_gen_f_list)
+            np.mean(np.array(self.train_step_loss_gen_f_list))
         )
         self.train_epoch_loss_gen_s_list.append(
-            np.mean(self.train_step_loss_gen_s_list)
+            np.mean(np.array(self.train_step_loss_gen_s_list))
         )
         self.train_epoch_loss_gen_all_list.append(
-            np.mean(self.train_step_loss_gen_all_list)
+            np.mean(np.array(self.train_step_loss_gen_all_list))
         )
-        self.val_epoch_loss_disc_f_list.append(np.mean(self.val_step_loss_disc_f_list))
-        self.val_epoch_loss_disc_s_list.append(np.mean(self.val_step_loss_disc_s_list))
+        self.val_epoch_loss_disc_f_list.append(
+            np.mean(np.array(self.val_step_loss_disc_f_list))
+        )
+        self.val_epoch_loss_disc_s_list.append(
+            np.mean(np.array(self.val_step_loss_disc_s_list))
+        )
         self.val_epoch_loss_disc_all_list.append(
-            np.mean(self.val_step_loss_disc_all_list)
+            np.mean(np.array(self.val_step_loss_disc_all_list))
         )
-        self.val_epoch_loss_fm_f_list.append(np.mean(self.val_step_loss_fm_f_list))
-        self.val_epoch_loss_fm_s_list.append(np.mean(self.val_step_loss_fm_s_list))
-        self.val_epoch_loss_gen_f_list.append(np.mean(self.val_step_loss_gen_f_list))
-        self.val_epoch_loss_gen_s_list.append(np.mean(self.val_step_loss_gen_s_list))
+        self.val_epoch_loss_fm_f_list.append(
+            np.mean(np.array(self.val_step_loss_fm_f_list))
+        )
+        self.val_epoch_loss_fm_s_list.append(
+            np.mean(np.array(self.val_step_loss_fm_s_list))
+        )
+        self.val_epoch_loss_gen_f_list.append(
+            np.mean(np.array(self.val_step_loss_gen_f_list))
+        )
+        self.val_epoch_loss_gen_s_list.append(
+            np.mean(np.array(self.val_step_loss_gen_s_list))
+        )
         self.val_epoch_loss_gen_all_list.append(
-            np.mean(self.val_step_loss_gen_all_list)
+            np.mean(np.array(self.val_step_loss_gen_all_list))
         )
         self.train_step_loss_disc_f_list.clear()
         self.train_step_loss_disc_s_list.clear()
