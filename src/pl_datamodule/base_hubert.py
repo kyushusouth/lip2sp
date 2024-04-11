@@ -43,7 +43,11 @@ class BaseHuBERTDataModule(L.LightningDataModule):
                 hubert_encoder_output_dir / row["speaker"] / f'{row["filename"]}.npy'
             )
             hubert_cluster_path = (
-                hubert_cluster_dir / row["speaker"] / f'{row["filename"]}.npy'
+                hubert_cluster_dir
+                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
+                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
+                / row["speaker"]
+                / f'{row["filename"]}.npy'
             )
 
             if (
@@ -104,6 +108,8 @@ class BaseHuBERTDataModule(L.LightningDataModule):
             )
             hubert_cluster_path = (
                 hubert_cluster_dir
+                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
+                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
                 / row["speaker"]
                 / "wav"
                 / row["parent_dir"]
@@ -166,6 +172,8 @@ class BaseHuBERTDataModule(L.LightningDataModule):
             )
             hubert_cluster_path = (
                 hubert_cluster_dir
+                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
+                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
                 / row["speaker"]
                 / row["data"]
                 / "wav24kHz16bit"
@@ -219,7 +227,12 @@ class BaseHuBERTDataModule(L.LightningDataModule):
                 / f'{row["filename"]}.npy'
             )
             hubert_cluster_path = (
-                hubert_cluster_dir / row["dirname"] / "wav" / f'{row["filename"]}.npy'
+                hubert_cluster_dir
+                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
+                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
+                / row["dirname"]
+                / "wav"
+                / f'{row["filename"]}.npy'
             )
             if (
                 (not audio_path.exists())
