@@ -38,6 +38,24 @@ augs:
     use: false
   horizontal_flip:
     use: false
+    p: 0.5
   time_masking:
     use: false
     max_masking_sec: 0.5
+  random_erasing:
+    use: false
+    p: 0.5
+    scale_min: 0.02
+    scale_max: 0.33
+    ratio_min: 0.3
+    ratio_max: 3.3
+    value: 0
+  add_gaussian_noise:
+    use: false
+    kernel_size: 9
+    sigma_min: 0.1
+    sigma_max: 1.0
+  spec_gaussian_blur:
+    use: false
+    snr_min: 10
+    snr_max: 60
