@@ -178,10 +178,15 @@ class LitHiFiGANModel(L.LightningModule):
         feature_inputs_dict = feature.permute(0, 2, 1)
         feature_inputs_dict = feature_inputs_dict.reshape(
             feature_inputs_dict.shape[0], feature_inputs_dict.shape[1] // 2, -1
-        )
+        )  # (B, T, C)
+        
+        feature_hubert_encoder_inputs_dict = feature_hubert_encoder.permute(
+            0, 2, 1
+        )  # (B, T, C)
+        
         inputs_dict = {
             "feature": feature_inputs_dict,
-            "feature_hubert_encoder": feature_hubert_encoder.permute(0, 2, 1),
+            "feature_hubert_encoder": feature_hubert_encoder_inputs_dict,
             "feature_hubert_cluster": feature_hubert_cluster,
         }
         return inputs_dict
@@ -427,7 +432,9 @@ class LitHiFiGANModel(L.LightningModule):
     def on_validation_epoch_end(self) -> None:
         scheduler_list = self.lr_schedulers()
         if not isinstance(scheduler_list, list):
-            raise ValueError('Schedulers must be provided for generator and discriminator.')
+            raise ValueError(
+                "Schedulers must be provided for generator and discriminator."
+            )
         scheduler_g = scheduler_list[0]
         scheduler_d = scheduler_list[1]
         scheduler_g.step()
