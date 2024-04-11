@@ -242,6 +242,12 @@ def process_save_kmeans(
 
 def save_kmeans_hifi_captain(cfg: omegaconf.DictConfig) -> None:
     df = pd.read_csv(str(Path(cfg["path"]["hifi_captain"]["df_path"]).expanduser()))
+    df = (
+        df.groupby(["speaker"])
+        .apply(lambda x: x.sample(frac=0.6, random_state=42), include_groups=False)
+        .reset_index()
+        .drop(columns=["level_1"])
+    )
     hubert_encoder_output_dir = Path(
         cfg["path"]["hifi_captain"]["hubert_encoder_output_dir"]
     ).expanduser()
@@ -258,8 +264,6 @@ def save_kmeans_hifi_captain(cfg: omegaconf.DictConfig) -> None:
             continue
         hubert_encoder_output = np.load(str(hubert_encoder_output_path))
         hubert_encoder_output_list.append(hubert_encoder_output)
-        
-    breakpoint()
 
     kmeans = process_save_kmeans(
         cfg=cfg,
@@ -473,11 +477,9 @@ def save_clusters(cfg: omegaconf.DictConfig):
     """
     学習済みkmeansモデルを読み込み、クラスタリングした結果を保存する
     """
-    kmeans_dir = None
-    if cfg["model"]["decoder"]["hubert"]["kmeans"] == "jsut":
-        kmeans_dir = Path(cfg["path"]["jsut"]["hubert_kmeans_dir"]).expanduser()
-    if kmeans_dir is None:
-        raise ValueError("kmeans_dir is not defined.")
+    kmeans_dir = Path(
+        cfg["path"][cfg["model"]["decoder"]["hubert"]["kmeans"]]["hubert_kmeans_dir"]
+    ).expanduser()
     kmeans_path = (
         kmeans_dir / f"{cfg['model']['decoder']['hubert']['n_clusters']}.pickle"
     )
@@ -492,8 +494,7 @@ def save_clusters(cfg: omegaconf.DictConfig):
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
     # save_numerical_features(cfg)
-    save_kmeans(cfg)
-    breakpoint()
+    # save_kmeans(cfg)
     save_clusters(cfg)
 
 
