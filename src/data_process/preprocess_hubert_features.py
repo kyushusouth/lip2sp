@@ -225,19 +225,57 @@ def save_numerical_features(cfg: omegaconf.DictConfig) -> None:
     save_numerical_features_jsut(cfg, model, debug=False)
 
 
-def save_kmeans(cfg: omegaconf.DictConfig) -> None:
-    """
-    hubert特徴量に対するkmeansクラスタリングの学習と保存
-    jsutでkmeansを学習し、それを保存して他のデータセットのクラスタリングにも用いる
+def process_save_kmeans(
+    cfg: omegaconf.DictConfig, hubert_encoder_output_list: list
+) -> MiniBatchKMeans:
+    hubert_encoder_output_all = np.concatenate(hubert_encoder_output_list, axis=0)
+    kmeans = MiniBatchKMeans(
+        n_clusters=cfg["model"]["decoder"]["hubert"]["n_clusters"],
+        init="k-means++",
+        batch_size=10000,
+        compute_labels=False,
+        random_state=42,
+        verbose=1,
+    ).fit(hubert_encoder_output_all)
+    return kmeans
 
-    動画音声合成に用いるデータセットを使わない理由
-    - データを変えるたびに毎回kmeansを変更しないといけなくなり、ややこしくなることが予想されるため
 
-    外部データの中でもjsutを用いる理由
-    - 日本語のデータで実験を行うため
-    - 言語的な特徴によってクラスタを形成してほしいので、単一話者かつ雑音の少ないデータを用いることで、
-    話者性やノイズといった望まない特徴によるクラスタの形成を避ける
-    """
+def save_kmeans_hifi_captain(cfg: omegaconf.DictConfig) -> None:
+    df = pd.read_csv(str(Path(cfg["path"]["hifi_captain"]["df_path"]).expanduser()))
+    hubert_encoder_output_dir = Path(
+        cfg["path"]["hifi_captain"]["hubert_encoder_output_dir"]
+    ).expanduser()
+    hubert_encoder_output_list = []
+    for i, row in tqdm(df.iterrows(), total=len(df)):
+        hubert_encoder_output_path = (
+            hubert_encoder_output_dir
+            / row["speaker"]
+            / "wav"
+            / row["parent_dir"]
+            / f'{row["filename"]}.npy'
+        )
+        if not hubert_encoder_output_path.exists():
+            continue
+        hubert_encoder_output = np.load(str(hubert_encoder_output_path))
+        hubert_encoder_output_list.append(hubert_encoder_output)
+        
+    breakpoint()
+
+    kmeans = process_save_kmeans(
+        cfg=cfg,
+        hubert_encoder_output_list=hubert_encoder_output_list,
+    )
+
+    kmeans_dir = Path(cfg["path"]["hifi_captain"]["hubert_kmeans_dir"]).expanduser()
+    kmeans_path = (
+        kmeans_dir / f"{cfg['model']['decoder']['hubert']['n_clusters']}.pickle"
+    )
+    kmeans_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(str(kmeans_path), "wb") as f:
+        pickle.dump(kmeans, f)
+
+
+def save_kmeans_jsut(cfg: omegaconf.DictConfig) -> None:
     df = pd.read_csv(str(Path(cfg["path"]["jsut"]["df_path"]).expanduser()))
     hubert_encoder_output_dir = Path(
         cfg["path"]["jsut"]["hubert_encoder_output_dir"]
@@ -255,20 +293,23 @@ def save_kmeans(cfg: omegaconf.DictConfig) -> None:
         hubert_encoder_output = np.load(str(hubert_encoder_output_path))
         hubert_encoder_output_list.append(hubert_encoder_output)
 
-    hubert_encoder_output_all = np.concatenate(hubert_encoder_output_list, axis=0)
-    kmeans = MiniBatchKMeans(
-        n_clusters=cfg["model"]["decoder"]["hubert"]["n_clusters"],
-        init="k-means++",
-        batch_size=10000,
-        compute_labels=False,
-        random_state=42,
-        verbose=1,
-    ).fit(hubert_encoder_output_all)
+    kmeans = process_save_kmeans(
+        cfg=cfg,
+        hubert_encoder_output_list=hubert_encoder_output_list,
+    )
 
-    kmeans_path = Path(cfg["path"]["jsut"]["hubert_kmeans_path"]).expanduser()
+    kmeans_dir = Path(cfg["path"]["jsut"]["hubert_kmeans_dir"]).expanduser()
+    kmeans_path = (
+        kmeans_dir / f"{cfg['model']['decoder']['hubert']['n_clusters']}.pickle"
+    )
     kmeans_path.parent.mkdir(parents=True, exist_ok=True)
     with open(str(kmeans_path), "wb") as f:
         pickle.dump(kmeans, f)
+
+
+def save_kmeans(cfg: omegaconf.DictConfig):
+    save_kmeans_hifi_captain(cfg)
+    # save_kmeans_jsut(cfg)
 
 
 def process_save_clusters(
@@ -291,6 +332,11 @@ def save_clusters_kablab(
         cfg["path"]["kablab"]["hubert_encoder_output_dir"]
     ).expanduser()
     hubert_cluster_dir = Path(cfg["path"]["kablab"]["hubert_cluster_dir"]).expanduser()
+    hubert_cluster_dir = (
+        hubert_cluster_dir
+        / cfg["model"]["decoder"]["hubert"]["kmeans"]
+        / str(cfg["model"]["decoder"]["hubert"]["n_clusters"])
+    )
     for i, row in tqdm(df.iterrows(), total=len(df)):
         hubert_encoder_output_path = (
             hubert_encoder_output_dir / row["speaker"] / f'{row["filename"]}.npy'
@@ -319,6 +365,11 @@ def save_clusters_hifi_captain(
     hubert_cluster_dir = Path(
         cfg["path"]["hifi_captain"]["hubert_cluster_dir"]
     ).expanduser()
+    hubert_cluster_dir = (
+        hubert_cluster_dir
+        / cfg["model"]["decoder"]["hubert"]["kmeans"]
+        / str(cfg["model"]["decoder"]["hubert"]["n_clusters"])
+    )
     for i, row in tqdm(df.iterrows(), total=len(df)):
         hubert_encoder_output_path = (
             hubert_encoder_output_dir
@@ -353,6 +404,11 @@ def save_clusters_jvs(
         cfg["path"]["jvs"]["hubert_encoder_output_dir"]
     ).expanduser()
     hubert_cluster_dir = Path(cfg["path"]["jvs"]["hubert_cluster_dir"]).expanduser()
+    hubert_cluster_dir = (
+        hubert_cluster_dir
+        / cfg["model"]["decoder"]["hubert"]["kmeans"]
+        / str(cfg["model"]["decoder"]["hubert"]["n_clusters"])
+    )
     for i, row in tqdm(df.iterrows(), total=len(df)):
         hubert_encoder_output_path = (
             hubert_encoder_output_dir
@@ -387,6 +443,11 @@ def save_clusters_jsut(
         cfg["path"]["jsut"]["hubert_encoder_output_dir"]
     ).expanduser()
     hubert_cluster_dir = Path(cfg["path"]["jsut"]["hubert_cluster_dir"]).expanduser()
+    hubert_cluster_dir = (
+        hubert_cluster_dir
+        / cfg["model"]["decoder"]["hubert"]["kmeans"]
+        / str(cfg["model"]["decoder"]["hubert"]["n_clusters"])
+    )
     for i, row in tqdm(df.iterrows(), total=len(df)):
         hubert_encoder_output_path = (
             hubert_encoder_output_dir
@@ -412,7 +473,14 @@ def save_clusters(cfg: omegaconf.DictConfig):
     """
     学習済みkmeansモデルを読み込み、クラスタリングした結果を保存する
     """
-    kmeans_path = Path(cfg["path"]["jsut"]["hubert_kmeans_path"]).expanduser()
+    kmeans_dir = None
+    if cfg["model"]["decoder"]["hubert"]["kmeans"] == "jsut":
+        kmeans_dir = Path(cfg["path"]["jsut"]["hubert_kmeans_dir"]).expanduser()
+    if kmeans_dir is None:
+        raise ValueError("kmeans_dir is not defined.")
+    kmeans_path = (
+        kmeans_dir / f"{cfg['model']['decoder']['hubert']['n_clusters']}.pickle"
+    )
     with open(str(kmeans_path), "rb") as f:
         kmeans = pickle.load(f)
     save_clusters_kablab(cfg, kmeans, debug=False)
@@ -424,7 +492,8 @@ def save_clusters(cfg: omegaconf.DictConfig):
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
     # save_numerical_features(cfg)
-    # save_kmeans(cfg)
+    save_kmeans(cfg)
+    breakpoint()
     save_clusters(cfg)
 
 
