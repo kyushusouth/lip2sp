@@ -140,15 +140,26 @@ class BaseHuBERTDataset(Dataset):
         lip_padded[: lip.shape[0]] = lip
         lip = lip_padded
 
-        wav = torch.from_numpy(wav)
-        feature = torch.from_numpy(feature).permute(1, 0)  # (T, C)
-        feature_avhubert = torch.from_numpy(feature_avhubert).permute(1, 0)  # (T, C)
-        feature_hubert_encoder = torch.from_numpy(feature_hubert_encoder)  # (C, T)
-        feature_hubert_prj = torch.from_numpy(feature_hubert_prj)  # (C, T)
-        feature_hubert_cluster = torch.from_numpy(feature_hubert_cluster)  # (T,)
-        lip = torch.from_numpy(lip).permute(1, 2, 3, 0)  # (C, H, W, T)
+        wav = torch.from_numpy(wav).to(torch.float32)  # (T,)
+        feature = torch.from_numpy(feature).permute(1, 0).to(torch.float32)  # (T, C)
+        feature_avhubert = (
+            torch.from_numpy(feature_avhubert).permute(1, 0).to(torch.float32)
+        )  # (T, C)
+        feature_hubert_encoder = torch.from_numpy(feature_hubert_encoder).to(
+            torch.float32
+        )  # (C, T)
+        feature_hubert_prj = torch.from_numpy(feature_hubert_prj).to(
+            torch.float32
+        )  # (C, T)
+        feature_hubert_cluster = torch.from_numpy(feature_hubert_cluster).to(
+            torch.float32
+        )  # (T,)
+        lip = (
+            torch.from_numpy(lip).permute(1, 2, 3, 0).to(torch.float32)
+        )  # (C, H, W, T)
 
         lip, feature, feature_avhubert = self.transform(
+            wav=wav,
             lip=lip,
             feature=feature,
             feature_avhubert=feature_avhubert,
