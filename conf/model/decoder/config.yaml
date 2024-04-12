@@ -6,7 +6,9 @@ conv:
 hubert:
   model_name: rinna/japanese-hubert-base
   encoder_output_dim: 768
-  kmeans: jsut
-  n_clusters: 100
+  kmeans: hifi_captain
+  n_clusters: 200
   ignore_index: 0
   freeze: true
+
+vocoder_input_cluster: conv

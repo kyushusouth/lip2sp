@@ -3,20 +3,20 @@ batch_size: 1
 num_workers: 1
 input_sec: 1
 seed: 42
-monitoring_metric: "val_loss_gen_all"
+monitoring_metric: "val_loss_mel"
 monitoring_mode: "min"
 early_stopping_patience: 40
 save_checkpoint_every_n_epochs: 1
 save_checkpoint_top_k: 1
-limit_train_batches: 0.05
-limit_val_batches: 0.1
+limit_train_batches: 10
+limit_val_batches: 10
 limit_test_batches: 0.1
 log_every_n_steps: 10
 precision: "16-mixed"
 accumulate_grad_batches: 1
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
-checkpoints_save_dir: "~/lip2sp/checkpoints/debug"
+checkpoints_save_dir: "~/lip2sp/checkpoints/hifigan"
 finetune: false
 finetune_start_model_path:
 optimizer:
