@@ -33,7 +33,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
 
     wandb_logger = WandbLogger(
         project=cfg["training"]["wandb"]["project_name"],
-        log_model=True,
+        log_model=False,
         config=omegaconf.OmegaConf.to_container(
             cfg, resolve=True, throw_on_missing=True
         ),
