@@ -46,6 +46,23 @@ class LossFunctions:
         mse_loss = torch.sum(loss) / torch.sum(n_loss)
         return mse_loss
 
+    def l1_loss(self, pred, target, mask):
+        """
+        pred: (B, C, T)
+        target: (B, C, T)
+        mask (True elements are ignored.): (B, T)
+        """
+        loss_list = []
+        for i in range(mask.shape[0]):
+            pred_unmasked = pred[i, :, ~mask[i, :]]
+            target_unmasked = target[i, :, ~mask[i, :]]
+            loss = torch.nn.functional.l1_loss(
+                pred_unmasked, target_unmasked, reduction="none"
+            )
+            loss_list.append(loss)
+        loss = torch.cat(loss_list, dim=-1).mean()
+        return loss
+
     def mae_loss(self, output, target, data_len, max_len):
         mask = make_pad_mask(data_len, max_len)
         loss = torch.abs((output - target))
@@ -58,29 +75,6 @@ class LossFunctions:
             torch.zeros_like(mask).to(torch.float32),
         )
         loss = torch.sum(loss) / torch.sum(n_loss)
-        return loss
-
-    def cross_entropy_loss(self, output, target, ignore_index, speaker=None):
-        if self.use_weighted_mean:
-            weight_list = []
-            for spk in speaker:
-                weight_list.append(self.weight[spk])
-
-            weight = torch.tensor(weight_list).to(device=output.device)
-
-            loss_list = []
-            for i in range(output.shape[0]):
-                loss_list.append(
-                    F.cross_entropy(
-                        output[i].unsqueeze(0),
-                        target[0].unsqueeze(0),
-                        ignore_index=ignore_index,
-                    )
-                    * weight[i]
-                )
-            loss = sum(loss_list) / len(loss_list)
-        else:
-            loss = F.cross_entropy(output, target, ignore_index=ignore_index)
         return loss
 
     def bce_with_logits_loss(self, output, target, data_len, max_len):
