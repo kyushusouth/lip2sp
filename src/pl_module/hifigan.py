@@ -33,6 +33,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.train_step_loss_disc_f_list: list[float] = []
         self.train_step_loss_disc_s_list: list[float] = []
         self.train_step_loss_disc_all_list: list[float] = []
+        self.train_step_loss_mel_list: list[float] = []
         self.train_step_loss_fm_f_list: list[float] = []
         self.train_step_loss_fm_s_list: list[float] = []
         self.train_step_loss_gen_f_list: list[float] = []
@@ -41,6 +42,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.val_step_loss_disc_f_list: list[float] = []
         self.val_step_loss_disc_s_list: list[float] = []
         self.val_step_loss_disc_all_list: list[float] = []
+        self.val_step_loss_mel_list: list[float] = []
         self.val_step_loss_fm_f_list: list[float] = []
         self.val_step_loss_fm_s_list: list[float] = []
         self.val_step_loss_gen_f_list: list[float] = []
@@ -49,6 +51,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.train_epoch_loss_disc_f_list: list[float] = []
         self.train_epoch_loss_disc_s_list: list[float] = []
         self.train_epoch_loss_disc_all_list: list[float] = []
+        self.train_epoch_loss_mel_list: list[float] = []
         self.train_epoch_loss_fm_f_list: list[float] = []
         self.train_epoch_loss_fm_s_list: list[float] = []
         self.train_epoch_loss_gen_f_list: list[float] = []
@@ -57,6 +60,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.val_epoch_loss_disc_f_list: list[float] = []
         self.val_epoch_loss_disc_s_list: list[float] = []
         self.val_epoch_loss_disc_all_list: list[float] = []
+        self.val_epoch_loss_mel_list: list[float] = []
         self.val_epoch_loss_fm_f_list: list[float] = []
         self.val_epoch_loss_fm_s_list: list[float] = []
         self.val_epoch_loss_gen_f_list: list[float] = []
@@ -165,25 +169,32 @@ class LitHiFiGANModel(L.LightningModule):
         return loss, gen_losses
 
     def prepare_inputs_dict(
-        self, feature, feature_hubert_encoder, feature_hubert_cluster
-    ) -> dict[str, torch.Tensor]:
+        self,
+        feature: torch.Tensor | None,
+        feature_hubert_encoder: torch.Tensor | None,
+        feature_hubert_cluster: torch.Tensor | None,
+    ) -> dict[str, torch.Tensor | None]:
         """
         args:
             feature: (B, C, T)
             feature_hubert_encoder: (B, C, T)
             feature_hubert_cluster: (B, T)
         """
-        # メルスペクトログラムが100Hzである一方、hubert特徴量は50Hzになっている
-        # そのため、メルスペクトログラムについては連続した2つのフレームをチャンネル方向に積むことで、50Hzの特徴量として扱う
-        feature_inputs_dict = feature.permute(0, 2, 1)
-        feature_inputs_dict = feature_inputs_dict.reshape(
-            feature_inputs_dict.shape[0], feature_inputs_dict.shape[1] // 2, -1
-        )  # (B, T, C)
-        
-        feature_hubert_encoder_inputs_dict = feature_hubert_encoder.permute(
-            0, 2, 1
-        )  # (B, T, C)
-        
+        if feature is None:
+            feature_inputs_dict = None
+        else:
+            feature_inputs_dict = feature.permute(0, 2, 1)
+            feature_inputs_dict = feature_inputs_dict.reshape(
+                feature_inputs_dict.shape[0], feature_inputs_dict.shape[1] // 2, -1
+            )  # (B, T, C)
+
+        if feature_hubert_encoder is None:
+            feature_hubert_encoder_inputs_dict = None
+        else:
+            feature_hubert_encoder_inputs_dict = feature_hubert_encoder.permute(
+                0, 2, 1
+            )  # (B, T, C)
+
         inputs_dict = {
             "feature": feature_inputs_dict,
             "feature_hubert_encoder": feature_hubert_encoder_inputs_dict,
@@ -275,6 +286,12 @@ class LitHiFiGANModel(L.LightningModule):
             batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
+            "train_loss_mel",
+            loss_mel,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
             "train_loss_fm_f",
             loss_fm_f,
             logger=True,
@@ -307,6 +324,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.train_step_loss_disc_f_list.append(loss_disc_f.item())
         self.train_step_loss_disc_s_list.append(loss_disc_s.item())
         self.train_step_loss_disc_all_list.append(loss_disc_all.item())
+        self.train_step_loss_mel_list.append(loss_mel.item())
         self.train_step_loss_fm_f_list.append(loss_fm_f.item())
         self.train_step_loss_fm_s_list.append(loss_fm_s.item())
         self.train_step_loss_gen_f_list.append(loss_gen_f.item())
@@ -385,6 +403,12 @@ class LitHiFiGANModel(L.LightningModule):
             batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
+            "val_loss_mel",
+            loss_mel,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
             "val_loss_fm_f",
             loss_fm_f,
             logger=True,
@@ -417,6 +441,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.val_step_loss_disc_f_list.append(loss_disc_f.item())
         self.val_step_loss_disc_s_list.append(loss_disc_s.item())
         self.val_step_loss_disc_all_list.append(loss_disc_all.item())
+        self.val_step_loss_mel_list.append(loss_mel.item())
         self.val_step_loss_fm_f_list.append(loss_fm_f.item())
         self.val_step_loss_fm_s_list.append(loss_fm_s.item())
         self.val_step_loss_gen_f_list.append(loss_gen_f.item())
@@ -449,6 +474,9 @@ class LitHiFiGANModel(L.LightningModule):
         self.train_epoch_loss_disc_all_list.append(
             np.mean(np.array(self.train_step_loss_disc_all_list))
         )
+        self.train_epoch_loss_mel_list.append(
+            np.mean(np.array(self.train_step_loss_mel_list))
+        )
         self.train_epoch_loss_fm_f_list.append(
             np.mean(np.array(self.train_step_loss_fm_f_list))
         )
@@ -473,6 +501,9 @@ class LitHiFiGANModel(L.LightningModule):
         self.val_epoch_loss_disc_all_list.append(
             np.mean(np.array(self.val_step_loss_disc_all_list))
         )
+        self.val_epoch_loss_mel_list.append(
+            np.mean(np.array(self.val_step_loss_mel_list))
+        )
         self.val_epoch_loss_fm_f_list.append(
             np.mean(np.array(self.val_step_loss_fm_f_list))
         )
@@ -491,6 +522,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.train_step_loss_disc_f_list.clear()
         self.train_step_loss_disc_s_list.clear()
         self.train_step_loss_disc_all_list.clear()
+        self.train_step_loss_mel_list.clear()
         self.train_step_loss_fm_f_list.clear()
         self.train_step_loss_fm_s_list.clear()
         self.train_step_loss_gen_f_list.clear()
@@ -499,6 +531,7 @@ class LitHiFiGANModel(L.LightningModule):
         self.val_step_loss_disc_f_list.clear()
         self.val_step_loss_disc_s_list.clear()
         self.val_step_loss_disc_all_list.clear()
+        self.val_step_loss_mel_list.clear()
         self.val_step_loss_fm_f_list.clear()
         self.val_step_loss_fm_s_list.clear()
         self.val_step_loss_gen_f_list.clear()
@@ -519,6 +552,11 @@ class LitHiFiGANModel(L.LightningModule):
             title="loss_disc_all",
             train_loss_list=self.train_epoch_loss_disc_all_list,
             val_loss_list=self.val_epoch_loss_disc_all_list,
+        )
+        save_epoch_loss_plot(
+            title="loss_mel",
+            train_loss_list=self.train_epoch_loss_mel_list,
+            val_loss_list=self.val_epoch_loss_mel_list,
         )
         save_epoch_loss_plot(
             title="loss_fm_f",
