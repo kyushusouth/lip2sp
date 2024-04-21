@@ -8,7 +8,7 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from src.main import start  # noqa: F401
+from src.main import on_start  # noqa: F401
 from src.pl_datamodule.base import BaseDataModule
 from src.pl_module.base import LitBaseModel
 
@@ -17,7 +17,7 @@ from src.pl_module.base import LitBaseModel
 def main(cfg: omegaconf.DictConfig) -> None:
     cfg["training"]["checkpoints_save_dir"] = str(
         Path(cfg["training"]["checkpoints_save_dir"]).expanduser()
-        / start.CURRENT_TIME
+        / on_start.CURRENT_TIME
     )
 
     datamodule = BaseDataModule(cfg)
