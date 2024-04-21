@@ -8,7 +8,8 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from src.main import start  # noqa: F401
+from src.main import on_start  # noqa: F401
+from src.main.on_end import rename_checkpoint_file
 from src.pl_datamodule.base_hubert import BaseHuBERTDataModule
 from src.pl_module.base_hubert import LitBaseHuBERTModel
 
@@ -17,7 +18,7 @@ from src.pl_module.base_hubert import LitBaseHuBERTModel
 def main(cfg: omegaconf.DictConfig) -> None:
     cfg["training"]["checkpoints_save_dir"] = str(
         Path(cfg["training"]["checkpoints_save_dir"]).expanduser()
-        / start.CURRENT_TIME
+        / on_start.CURRENT_TIME
     )
 
     datamodule = BaseHuBERTDataModule(cfg)
@@ -55,12 +56,10 @@ def main(cfg: omegaconf.DictConfig) -> None:
             ModelCheckpoint(
                 monitor=cfg["training"]["monitoring_metric"],
                 mode=cfg["training"]["monitoring_mode"],
-                every_n_epochs=cfg["training"][
-                    "save_checkpoint_every_n_epochs"
-                ],
+                every_n_epochs=cfg["training"]["save_checkpoint_every_n_epochs"],
                 save_top_k=cfg["training"]["save_checkpoint_top_k"],
                 dirpath=cfg["training"]["checkpoints_save_dir"],
-                filename="{epoch}-{step}-{val_loss:.3f}",
+                filename="{epoch}-{step}",
             ),
             LearningRateMonitor(logging_interval="epoch"),
         ],
@@ -82,11 +81,14 @@ def main(cfg: omegaconf.DictConfig) -> None:
 
     trainer.fit(model=model, datamodule=datamodule)
 
-    # trainer.test(
-    #     model=model,
-    #     datamodule=datamodule,
-    #     ckpt_path="best",
-    # )
+    trainer.test(
+        model=model,
+        datamodule=datamodule,
+        ckpt_path="best",
+        # ckpt_path="/home/minami/lip2sp/checkpoints/base_hubert/20240412_164624/epoch=2-step=15.ckpt",
+    )
+
+    rename_checkpoint_file(cfg["training"]["checkpoints_save_dir"])
 
     wandb.finish()
 
