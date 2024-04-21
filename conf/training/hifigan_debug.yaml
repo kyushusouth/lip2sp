@@ -16,7 +16,7 @@ precision: "16-mixed"
 accumulate_grad_batches: 1
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
-checkpoints_save_dir: "~/lip2sp/checkpoints/hifigan"
+checkpoints_save_dir: "~/lip2sp/checkpoints/debug"
 finetune: false
 finetune_start_model_path:
 optimizer:

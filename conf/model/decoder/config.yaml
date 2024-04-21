@@ -2,6 +2,7 @@ conv:
   n_conv_layers: 2
   conv_kernel_size: 3
   dropout: 0.1
+  freeze: true
 
 hubert:
   model_name: rinna/japanese-hubert-base
@@ -9,6 +10,10 @@ hubert:
   kmeans: hifi_captain
   n_clusters: 200
   ignore_index: 0
-  freeze: true
+  freeze: false
+  encoder_input_mask:
+    use: true
+    mask_prob: 0.8
+    mask_length: 10
 
 vocoder_input_cluster: hubert

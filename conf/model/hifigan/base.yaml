@@ -4,9 +4,9 @@ resblock_dilation_sizes: [[1, 3, 5], [1, 3, 5], [1, 3, 5]]
 upsample_rates: [5, 4, 4, 2, 2]
 upsample_initial_channel: 512
 upsample_kernel_sizes: [11, 8, 8, 4, 4]
-input: "cat_mel_hubert_cluster"
+input: "cat_mel_hubert_encoder"
 embedding_dim: 128
-model_path: "/home/minami/lip2sp/checkpoints/hifigan/20240413_073833/epoch:0-step:1300.ckpt"
+model_path: "/home/minami/lip2sp/checkpoints/hifigan/20240418_083428/epoch:27-step:36400.ckpt"
 loss:
   n_mels: 80
   n_fft: 1024
