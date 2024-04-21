@@ -13,6 +13,7 @@ from jiwer import wer
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
 
+from src.data_process.utils import get_upsample, get_upsample_hubert
 from src.log_fn.save_loss import save_epoch_loss_plot
 from src.log_fn.save_sample import save_mel
 from src.loss_fn.base import LossFunctions
@@ -28,36 +29,62 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.automatic_optimization = True
 
         self.model = BaseHuBERTModel(cfg)
+
+        if cfg["model"]["avhubert"]["freeze"]:
+            for param in self.model.avhubert.parameters():
+                param.requires_grad = False
+
+        if cfg["model"]["decoder"]["conv"]["freeze"]:
+            for param in self.model.conv_decoder.parameters():
+                param.requires_grad = False
+
         if cfg["model"]["decoder"]["hubert"]["freeze"]:
             for param in self.model.hubert_decoder.hubert.parameters():
                 param.requires_grad = False
 
         self.loss_fn = LossFunctions()
 
-        self.train_step_loss_list = []
         self.train_step_conv_output_mel_loss_list = []
         self.train_step_conv_output_hubert_cluster_loss_list = []
         self.train_step_conv_output_hubert_prj_loss_list = []
+        self.train_step_hubert_output_reg_masked_loss_list = []
+        self.train_step_hubert_output_reg_unmasked_loss_list = []
         self.train_step_hubert_output_reg_loss_list = []
+        self.train_step_hubert_output_cls_masked_loss_list = []
+        self.train_step_hubert_output_cls_unmasked_loss_list = []
         self.train_step_hubert_output_cls_loss_list = []
-        self.train_epoch_loss_list = []
+        self.train_step_total_loss_list = []
         self.train_epoch_conv_output_mel_loss_list = []
         self.train_epoch_conv_output_hubert_cluster_loss_list = []
         self.train_epoch_conv_output_hubert_prj_loss_list = []
+        self.train_epoch_hubert_output_reg_masked_loss_list = []
+        self.train_epoch_hubert_output_reg_unmasked_loss_list = []
         self.train_epoch_hubert_output_reg_loss_list = []
+        self.train_epoch_hubert_output_cls_masked_loss_list = []
+        self.train_epoch_hubert_output_cls_unmasked_loss_list = []
         self.train_epoch_hubert_output_cls_loss_list = []
-        self.val_step_loss_list = []
+        self.train_epoch_total_loss_list = []
         self.val_step_conv_output_mel_loss_list = []
         self.val_step_conv_output_hubert_cluster_loss_list = []
         self.val_step_conv_output_hubert_prj_loss_list = []
+        self.val_step_hubert_output_reg_masked_loss_list = []
+        self.val_step_hubert_output_reg_unmasked_loss_list = []
         self.val_step_hubert_output_reg_loss_list = []
+        self.val_step_hubert_output_cls_masked_loss_list = []
+        self.val_step_hubert_output_cls_unmasked_loss_list = []
         self.val_step_hubert_output_cls_loss_list = []
-        self.val_epoch_loss_list = []
+        self.val_step_total_loss_list = []
         self.val_epoch_conv_output_mel_loss_list = []
         self.val_epoch_conv_output_hubert_cluster_loss_list = []
         self.val_epoch_conv_output_hubert_prj_loss_list = []
+        self.val_epoch_hubert_output_reg_masked_loss_list = []
+        self.val_epoch_hubert_output_reg_unmasked_loss_list = []
         self.val_epoch_hubert_output_reg_loss_list = []
+        self.val_epoch_hubert_output_cls_masked_loss_list = []
+        self.val_epoch_hubert_output_cls_unmasked_loss_list = []
         self.val_epoch_hubert_output_cls_loss_list = []
+        self.val_epoch_total_loss_list = []
+
         self.train_mel_example = {"gt": None, "pred": None}
         self.val_mel_example = {"gt": None, "pred": None}
 
@@ -67,7 +94,12 @@ class LitBaseHuBERTModel(L.LightningModule):
         )
         self.hifigan.eval()
 
-    def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
+    def convert_loss_nan_to_zero(self, loss):
+        if torch.isnan(loss):
+            loss = torch.tensor(0.0).to(dtype=torch.float32, device=self.device)
+        return loss
+
+    def calc_losses(self, batch):
         (
             wav,
             lip,
@@ -84,45 +116,105 @@ class LitBaseHuBERTModel(L.LightningModule):
             filename_list,
         ) = batch
 
+        padding_mask_lip = (
+            torch.arange(lip.shape[4])
+            .unsqueeze(0)
+            .repeat(lip.shape[0], 1)
+            .to(device=self.device)
+        )
+        padding_mask_lip = (padding_mask_lip >= lip_len.unsqueeze(1)).to(
+            dtype=torch.bool
+        )
+        padding_mask_feature = padding_mask_lip.repeat_interleave(
+            repeats=get_upsample(self.cfg), dim=1
+        )
+        padding_mask_feature_hubert = padding_mask_lip.repeat_interleave(
+            repeats=get_upsample_hubert(self.cfg), dim=1
+        )
+
         (
             conv_output_mel,
             conv_output_hubert_prj,
             conv_output_hubert_cluster,
             hubert_output_reg,
             hubert_output_cls,
+            mask_indices,
         ) = self.model(
             lip=lip,
             audio=None,
-            lip_len=lip_len,
             spk_emb=spk_emb,
+            feature_hubert_prj=feature_hubert_prj,
+            padding_mask_lip=padding_mask_lip,
+            padding_mask_feature_hubert=padding_mask_feature_hubert,
         )
 
-        conv_output_mel_loss = self.loss_fn.mae_loss(
-            conv_output_mel, feature, feature_len, max_len=conv_output_mel.shape[-1]
+        conv_output_mel_loss = self.loss_fn.l1_loss(
+            pred=conv_output_mel, target=feature, mask=padding_mask_feature
+        )
+        conv_output_hubert_prj_loss = self.loss_fn.l1_loss(
+            pred=conv_output_hubert_prj,
+            target=feature_hubert_prj,
+            mask=padding_mask_feature_hubert,
         )
         conv_output_hubert_cluster_loss = torch.nn.functional.cross_entropy(
-            conv_output_hubert_cluster,
-            feature_hubert_cluster,
+            input=conv_output_hubert_cluster,
+            target=feature_hubert_cluster,
             ignore_index=0,
         )
-        conv_output_hubert_prj_loss = self.loss_fn.mae_loss(
-            conv_output_hubert_prj,
-            feature_hubert_prj,
-            feature_len,
-            max_len=conv_output_hubert_prj.shape[-1],
+
+        hubert_output_reg_masked_loss = self.loss_fn.l1_loss(
+            pred=hubert_output_reg,
+            target=feature_hubert_encoder,
+            mask=(~mask_indices | padding_mask_feature_hubert),
         )
-        hubert_output_reg_loss = self.loss_fn.mae_loss(
-            hubert_output_reg,
-            feature_hubert_encoder,
-            feature_hubert_len,
-            max_len=hubert_output_reg.shape[-1],
+        hubert_output_reg_masked_loss = self.convert_loss_nan_to_zero(
+            hubert_output_reg_masked_loss
         )
-        hubert_output_cls_loss = torch.nn.functional.cross_entropy(
-            hubert_output_cls,
-            feature_hubert_cluster,
+        hubert_output_reg_unmasked_loss = self.loss_fn.l1_loss(
+            pred=hubert_output_reg,
+            target=feature_hubert_encoder,
+            mask=(mask_indices | padding_mask_feature_hubert),
+        )
+        hubert_output_reg_unmasked_loss = self.convert_loss_nan_to_zero(
+            hubert_output_reg_unmasked_loss
+        )
+        hubert_output_reg_loss = (
+            hubert_output_reg_masked_loss
+            * self.cfg["training"]["loss_weights"]["hubert_output_reg_masked_loss"]
+        ) + (
+            hubert_output_reg_unmasked_loss
+            * self.cfg["training"]["loss_weights"]["hubert_output_reg_unmasked_loss"]
+        )
+
+        hubert_output_cls_masked_loss = torch.nn.functional.cross_entropy(
+            input=hubert_output_cls,
+            target=torch.where(
+                (~mask_indices | padding_mask_feature_hubert), 0, feature_hubert_cluster
+            ),
             ignore_index=0,
         )
-        loss = (
+        hubert_output_cls_masked_loss = self.convert_loss_nan_to_zero(
+            hubert_output_cls_masked_loss
+        )
+        hubert_output_cls_unmasked_loss = torch.nn.functional.cross_entropy(
+            input=hubert_output_cls,
+            target=torch.where(
+                (mask_indices | padding_mask_feature_hubert), 0, feature_hubert_cluster
+            ),
+            ignore_index=0,
+        )
+        hubert_output_cls_unmasked_loss = self.convert_loss_nan_to_zero(
+            hubert_output_cls_unmasked_loss
+        )
+        hubert_output_cls_loss = (
+            hubert_output_cls_masked_loss
+            * self.cfg["training"]["loss_weights"]["hubert_output_cls_masked_loss"]
+        ) + (
+            hubert_output_cls_unmasked_loss
+            * self.cfg["training"]["loss_weights"]["hubert_output_cls_unmasked_loss"]
+        )
+
+        total_loss = (
             (
                 conv_output_mel_loss
                 * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
@@ -146,6 +238,36 @@ class LitBaseHuBERTModel(L.LightningModule):
                 * self.cfg["training"]["loss_weights"]["hubert_output_cls_loss"]
             )
         )
+        return (
+            conv_output_mel_loss,
+            conv_output_hubert_cluster_loss,
+            conv_output_hubert_prj_loss,
+            hubert_output_reg_masked_loss,
+            hubert_output_reg_unmasked_loss,
+            hubert_output_reg_loss,
+            hubert_output_cls_masked_loss,
+            hubert_output_cls_unmasked_loss,
+            hubert_output_cls_loss,
+            total_loss,
+            feature,
+            conv_output_mel,
+        )
+
+    def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
+        (
+            conv_output_mel_loss,
+            conv_output_hubert_cluster_loss,
+            conv_output_hubert_prj_loss,
+            hubert_output_reg_masked_loss,
+            hubert_output_reg_unmasked_loss,
+            hubert_output_reg_loss,
+            hubert_output_cls_masked_loss,
+            hubert_output_cls_unmasked_loss,
+            hubert_output_cls_loss,
+            total_loss,
+            feature,
+            conv_output_mel,
+        ) = self.calc_losses(batch)
 
         self.log(
             "train_conv_output_mel_loss",
@@ -166,8 +288,32 @@ class LitBaseHuBERTModel(L.LightningModule):
             batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
+            "train_hubert_output_reg_masked_loss",
+            hubert_output_reg_masked_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "train_hubert_output_reg_unmasked_loss",
+            hubert_output_reg_unmasked_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
             "train_hubert_output_reg_loss",
             hubert_output_reg_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "train_hubert_output_cls_masked_loss",
+            hubert_output_cls_masked_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "train_hubert_output_cls_unmasked_loss",
+            hubert_output_cls_unmasked_loss,
             logger=True,
             batch_size=self.cfg["training"]["batch_size"],
         )
@@ -178,8 +324,8 @@ class LitBaseHuBERTModel(L.LightningModule):
             batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
-            "train_loss",
-            loss,
+            "train_total_loss",
+            total_loss,
             logger=True,
             batch_size=self.cfg["training"]["batch_size"],
         )
@@ -191,13 +337,25 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.train_step_conv_output_hubert_prj_loss_list.append(
             conv_output_hubert_prj_loss.item()
         )
+        self.train_step_hubert_output_reg_masked_loss_list.append(
+            hubert_output_reg_masked_loss.item()
+        )
+        self.train_step_hubert_output_reg_unmasked_loss_list.append(
+            hubert_output_reg_unmasked_loss.item()
+        )
         self.train_step_hubert_output_reg_loss_list.append(
             hubert_output_reg_loss.item()
+        )
+        self.train_step_hubert_output_cls_masked_loss_list.append(
+            hubert_output_cls_masked_loss.item()
+        )
+        self.train_step_hubert_output_cls_unmasked_loss_list.append(
+            hubert_output_cls_unmasked_loss.item()
         )
         self.train_step_hubert_output_cls_loss_list.append(
             hubert_output_cls_loss.item()
         )
-        self.train_step_loss_list.append(loss.item())
+        self.train_step_total_loss_list.append(total_loss.item())
 
         self.train_mel_example["gt"] = (
             feature[0].cpu().detach().numpy().astype(np.float32)
@@ -205,85 +363,23 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.train_mel_example["pred"] = (
             conv_output_mel[0].cpu().detach().numpy().astype(np.float32)
         )
-        return loss
+        return total_loss
 
     def validation_step(self, batch: list, batch_index: int) -> None:
         (
-            wav,
-            lip,
+            conv_output_mel_loss,
+            conv_output_hubert_cluster_loss,
+            conv_output_hubert_prj_loss,
+            hubert_output_reg_masked_loss,
+            hubert_output_reg_unmasked_loss,
+            hubert_output_reg_loss,
+            hubert_output_cls_masked_loss,
+            hubert_output_cls_unmasked_loss,
+            hubert_output_cls_loss,
+            total_loss,
             feature,
-            feature_avhubert,
-            feature_hubert_encoder,
-            feature_hubert_prj,
-            feature_hubert_cluster,
-            spk_emb,
-            feature_len,
-            feature_hubert_len,
-            lip_len,
-            speaker_list,
-            filename_list,
-        ) = batch
-
-        (
             conv_output_mel,
-            conv_output_hubert_prj,
-            conv_output_hubert_cluster,
-            hubert_output_reg,
-            hubert_output_cls,
-        ) = self.model(
-            lip=lip,
-            audio=None,
-            lip_len=lip_len,
-            spk_emb=spk_emb,
-        )
-
-        conv_output_mel_loss = self.loss_fn.mae_loss(
-            conv_output_mel, feature, feature_len, max_len=conv_output_mel.shape[-1]
-        )
-        conv_output_hubert_cluster_loss = torch.nn.functional.cross_entropy(
-            conv_output_hubert_cluster,
-            feature_hubert_cluster,
-            ignore_index=0,
-        )
-        conv_output_hubert_prj_loss = self.loss_fn.mae_loss(
-            conv_output_hubert_prj,
-            feature_hubert_prj,
-            feature_len,
-            max_len=conv_output_hubert_prj.shape[-1],
-        )
-        hubert_output_reg_loss = self.loss_fn.mae_loss(
-            hubert_output_reg,
-            feature_hubert_encoder,
-            feature_hubert_len,
-            max_len=hubert_output_reg.shape[-1],
-        )
-        hubert_output_cls_loss = torch.nn.functional.cross_entropy(
-            hubert_output_cls,
-            feature_hubert_cluster,
-            ignore_index=0,
-        )
-        loss = (
-            (
-                conv_output_mel_loss
-                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
-            )
-            + (
-                conv_output_hubert_cluster_loss
-                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
-            )
-            + (
-                conv_output_hubert_prj_loss
-                * self.cfg["training"]["loss_weights"]["conv_output_hubert_prj_loss"]
-            )
-            + (
-                hubert_output_reg_loss
-                * self.cfg["training"]["loss_weights"]["hubert_output_reg_loss"]
-            )
-            + (
-                hubert_output_cls_loss
-                * self.cfg["training"]["loss_weights"]["hubert_output_cls_loss"]
-            )
-        )
+        ) = self.calc_losses(batch)
 
         self.log(
             "val_conv_output_mel_loss",
@@ -304,8 +400,32 @@ class LitBaseHuBERTModel(L.LightningModule):
             batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
+            "val_hubert_output_reg_masked_loss",
+            hubert_output_reg_masked_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "val_hubert_output_reg_unmasked_loss",
+            hubert_output_reg_unmasked_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
             "val_hubert_output_reg_loss",
             hubert_output_reg_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "val_hubert_output_cls_masked_loss",
+            hubert_output_cls_masked_loss,
+            logger=True,
+            batch_size=self.cfg["training"]["batch_size"],
+        )
+        self.log(
+            "val_hubert_output_cls_unmasked_loss",
+            hubert_output_cls_unmasked_loss,
             logger=True,
             batch_size=self.cfg["training"]["batch_size"],
         )
@@ -316,8 +436,8 @@ class LitBaseHuBERTModel(L.LightningModule):
             batch_size=self.cfg["training"]["batch_size"],
         )
         self.log(
-            "val_loss",
-            loss,
+            "val_total_loss",
+            total_loss,
             logger=True,
             batch_size=self.cfg["training"]["batch_size"],
         )
@@ -329,9 +449,21 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.val_step_conv_output_hubert_prj_loss_list.append(
             conv_output_hubert_prj_loss.item()
         )
+        self.val_step_hubert_output_reg_masked_loss_list.append(
+            hubert_output_reg_masked_loss.item()
+        )
+        self.val_step_hubert_output_reg_unmasked_loss_list.append(
+            hubert_output_reg_unmasked_loss.item()
+        )
         self.val_step_hubert_output_reg_loss_list.append(hubert_output_reg_loss.item())
+        self.val_step_hubert_output_cls_masked_loss_list.append(
+            hubert_output_cls_masked_loss.item()
+        )
+        self.val_step_hubert_output_cls_unmasked_loss_list.append(
+            hubert_output_cls_unmasked_loss.item()
+        )
         self.val_step_hubert_output_cls_loss_list.append(hubert_output_cls_loss.item())
-        self.val_step_loss_list.append(loss.item())
+        self.val_step_total_loss_list.append(total_loss.item())
 
         self.val_mel_example["gt"] = (
             feature[0].cpu().detach().numpy().astype(np.float32)
@@ -350,18 +482,36 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.train_epoch_conv_output_hubert_prj_loss_list.append(
             np.mean(self.train_step_conv_output_hubert_prj_loss_list)
         )
+        self.train_epoch_hubert_output_reg_masked_loss_list.append(
+            np.mean(self.train_step_hubert_output_reg_masked_loss_list)
+        )
+        self.train_epoch_hubert_output_reg_unmasked_loss_list.append(
+            np.mean(self.train_step_hubert_output_reg_unmasked_loss_list)
+        )
         self.train_epoch_hubert_output_reg_loss_list.append(
             np.mean(self.train_step_hubert_output_reg_loss_list)
+        )
+        self.train_epoch_hubert_output_cls_masked_loss_list.append(
+            np.mean(self.train_step_hubert_output_cls_masked_loss_list)
+        )
+        self.train_epoch_hubert_output_cls_unmasked_loss_list.append(
+            np.mean(self.train_step_hubert_output_cls_unmasked_loss_list)
         )
         self.train_epoch_hubert_output_cls_loss_list.append(
             np.mean(self.train_step_hubert_output_cls_loss_list)
         )
-        self.train_epoch_loss_list.append(np.mean(self.train_step_loss_list))
+        self.train_epoch_total_loss_list.append(
+            np.mean(self.train_step_total_loss_list)
+        )
         self.train_step_conv_output_mel_loss_list.clear()
         self.train_step_conv_output_hubert_prj_loss_list.clear()
+        self.train_step_hubert_output_reg_masked_loss_list.clear()
+        self.train_step_hubert_output_reg_unmasked_loss_list.clear()
         self.train_step_hubert_output_reg_loss_list.clear()
+        self.train_step_hubert_output_cls_masked_loss_list.clear()
+        self.train_step_hubert_output_cls_unmasked_loss_list.clear()
         self.train_step_hubert_output_cls_loss_list.clear()
-        self.train_step_loss_list.clear()
+        self.train_step_total_loss_list.clear()
 
         self.val_epoch_conv_output_mel_loss_list.append(
             np.mean(self.val_step_conv_output_mel_loss_list)
@@ -372,18 +522,34 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.val_epoch_conv_output_hubert_prj_loss_list.append(
             np.mean(self.val_step_conv_output_hubert_prj_loss_list)
         )
+        self.val_epoch_hubert_output_reg_masked_loss_list.append(
+            np.mean(self.val_step_hubert_output_reg_masked_loss_list)
+        )
+        self.val_epoch_hubert_output_reg_unmasked_loss_list.append(
+            np.mean(self.val_step_hubert_output_reg_unmasked_loss_list)
+        )
         self.val_epoch_hubert_output_reg_loss_list.append(
             np.mean(self.val_step_hubert_output_reg_loss_list)
+        )
+        self.val_epoch_hubert_output_cls_masked_loss_list.append(
+            np.mean(self.val_step_hubert_output_cls_masked_loss_list)
+        )
+        self.val_epoch_hubert_output_cls_unmasked_loss_list.append(
+            np.mean(self.val_step_hubert_output_cls_unmasked_loss_list)
         )
         self.val_epoch_hubert_output_cls_loss_list.append(
             np.mean(self.val_step_hubert_output_cls_loss_list)
         )
-        self.val_epoch_loss_list.append(np.mean(self.val_step_loss_list))
+        self.val_epoch_total_loss_list.append(np.mean(self.val_step_total_loss_list))
         self.val_step_conv_output_mel_loss_list.clear()
         self.val_step_conv_output_hubert_prj_loss_list.clear()
+        self.val_step_hubert_output_reg_masked_loss_list.clear()
+        self.val_step_hubert_output_reg_unmasked_loss_list.clear()
         self.val_step_hubert_output_reg_loss_list.clear()
+        self.val_step_hubert_output_cls_masked_loss_list.clear()
+        self.val_step_hubert_output_cls_unmasked_loss_list.clear()
         self.val_step_hubert_output_cls_loss_list.clear()
-        self.val_step_loss_list.clear()
+        self.val_step_total_loss_list.clear()
 
         save_epoch_loss_plot(
             title="conv_output_mel_loss",
@@ -401,9 +567,29 @@ class LitBaseHuBERTModel(L.LightningModule):
             val_loss_list=self.val_epoch_conv_output_hubert_prj_loss_list,
         )
         save_epoch_loss_plot(
+            title="hubert_output_reg_masked_loss",
+            train_loss_list=self.train_epoch_hubert_output_reg_masked_loss_list,
+            val_loss_list=self.val_epoch_hubert_output_reg_masked_loss_list,
+        )
+        save_epoch_loss_plot(
+            title="hubert_output_reg_unmasked_loss",
+            train_loss_list=self.train_epoch_hubert_output_reg_unmasked_loss_list,
+            val_loss_list=self.val_epoch_hubert_output_reg_unmasked_loss_list,
+        )
+        save_epoch_loss_plot(
             title="hubert_output_reg_loss",
             train_loss_list=self.train_epoch_hubert_output_reg_loss_list,
             val_loss_list=self.val_epoch_hubert_output_reg_loss_list,
+        )
+        save_epoch_loss_plot(
+            title="hubert_output_cls_masked_loss",
+            train_loss_list=self.train_epoch_hubert_output_cls_masked_loss_list,
+            val_loss_list=self.val_epoch_hubert_output_cls_masked_loss_list,
+        )
+        save_epoch_loss_plot(
+            title="hubert_output_cls_unmasked_loss",
+            train_loss_list=self.train_epoch_hubert_output_cls_unmasked_loss_list,
+            val_loss_list=self.val_epoch_hubert_output_cls_unmasked_loss_list,
         )
         save_epoch_loss_plot(
             title="hubert_output_cls_loss",
@@ -411,9 +597,9 @@ class LitBaseHuBERTModel(L.LightningModule):
             val_loss_list=self.val_epoch_hubert_output_cls_loss_list,
         )
         save_epoch_loss_plot(
-            title="loss",
-            train_loss_list=self.train_epoch_loss_list,
-            val_loss_list=self.val_epoch_loss_list,
+            title="total_loss",
+            train_loss_list=self.train_epoch_total_loss_list,
+            val_loss_list=self.val_epoch_total_loss_list,
         )
 
         save_mel(
@@ -446,17 +632,36 @@ class LitBaseHuBERTModel(L.LightningModule):
             filename,
         ) = batch
 
+        padding_mask_lip = (
+            torch.arange(lip.shape[4])
+            .unsqueeze(0)
+            .repeat(lip.shape[0], 1)
+            .to(device=self.device)
+        )
+        padding_mask_lip = (padding_mask_lip >= lip_len.unsqueeze(1)).to(
+            dtype=torch.bool
+        )
+        padding_mask_feature = padding_mask_lip.repeat_interleave(
+            repeats=get_upsample(self.cfg), dim=1
+        )
+        padding_mask_feature_hubert = padding_mask_lip.repeat_interleave(
+            repeats=get_upsample_hubert(self.cfg), dim=1
+        )
+
         (
             conv_output_mel,
             conv_output_hubert_prj,
             conv_output_hubert_cluster,
             hubert_output_reg,
             hubert_output_cls,
+            mask_indices,
         ) = self.model(
             lip=lip,
             audio=None,
-            lip_len=lip_len,
             spk_emb=spk_emb,
+            feature_hubert_prj=feature_hubert_prj,
+            padding_mask_lip=padding_mask_lip,
+            padding_mask_feature_hubert=padding_mask_feature_hubert,
         )
 
         if self.cfg["model"]["decoder"]["vocoder_input_cluster"] == "conv":
