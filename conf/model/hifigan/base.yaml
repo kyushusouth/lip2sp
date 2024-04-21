@@ -6,7 +6,7 @@ upsample_initial_channel: 512
 upsample_kernel_sizes: [11, 8, 8, 4, 4]
 input: "cat_mel_hubert_cluster"
 embedding_dim: 128
-model_path:
+model_path: "/home/minami/lip2sp/checkpoints/hifigan/20240413_073833/epoch:0-step:1300.ckpt"
 loss:
   n_mels: 80
   n_fft: 1024

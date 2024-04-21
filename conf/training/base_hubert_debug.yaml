@@ -8,9 +8,9 @@ monitoring_mode: "min"
 early_stopping_patience: 10
 save_checkpoint_every_n_epochs: 1
 save_checkpoint_top_k: 1
-limit_train_batches: 0.2
-limit_val_batches: 0.2
-limit_test_batches: 0.2
+limit_train_batches: 10
+limit_val_batches: 10
+limit_test_batches: 10
 log_every_n_steps: 10
 precision: "16-mixed"
 accumulate_grad_batches: 8
@@ -50,7 +50,7 @@ augs:
     use: true
     max_masking_sec: 0.5
   random_erasing:
-    use: true
+    use: false
     p: 0.5
     scale_min: 0.02
     scale_max: 0.33

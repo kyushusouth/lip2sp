@@ -50,7 +50,7 @@ augs:
     use: true
     max_masking_sec: 0.5
   random_erasing:
-    use: true
+    use: false
     p: 0.5
     scale_min: 0.02
     scale_max: 0.33

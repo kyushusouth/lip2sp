@@ -11,4 +11,4 @@ hubert:
   ignore_index: 0
   freeze: true
 
-vocoder_input_cluster: conv
+vocoder_input_cluster: hubert
