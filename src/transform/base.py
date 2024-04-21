@@ -255,9 +255,10 @@ class BaseTransform:
             feat_std=feat_std,
         )
 
-        if self.cfg["training"]["augs"]["random_erasing"]["use"]:
-            lip = lip.permute(3, 0, 1, 2)  # (T, C, H, W)
-            lip = self.apply_random_erasing(lip)
-            lip = lip.permute(1, 2, 3, 0)  # (C, H, W, T)
+        if self.train_val_test == "train":
+            if self.cfg["training"]["augs"]["random_erasing"]["use"]:
+                lip = lip.permute(3, 0, 1, 2)  # (T, C, H, W)
+                lip = self.apply_random_erasing(lip)
+                lip = lip.permute(1, 2, 3, 0)  # (C, H, W, T)
 
         return lip, feature, feature_avhubert
