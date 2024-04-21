@@ -17,7 +17,7 @@ from src.log_fn.save_loss import save_epoch_loss_plot
 from src.log_fn.save_sample import save_mel
 from src.loss_fn.base import LossFunctions
 from src.model.base_hubert import BaseHuBERTModel
-from src.pl_module.pwg import LitPWG
+from src.pl_module.hifigan import LitHiFiGANModel
 
 
 class LitBaseHuBERTModel(L.LightningModule):
@@ -61,10 +61,11 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.train_mel_example = {"gt": None, "pred": None}
         self.val_mel_example = {"gt": None, "pred": None}
 
-        self.pwg = LitPWG.load_from_checkpoint(
-            self.cfg["model"]["pwg"]["model_path"], cfg=cfg
+        self.hifigan = LitHiFiGANModel.load_from_checkpoint(
+            cfg["model"]["hifigan"]["model_path"],
+            cfg=cfg,
         )
-        self.pwg.eval()
+        self.hifigan.eval()
 
     def training_step(self, batch: list, batch_index: int) -> torch.Tensor:
         (
@@ -128,7 +129,9 @@ class LitBaseHuBERTModel(L.LightningModule):
             )
             + (
                 conv_output_hubert_cluster_loss
-                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
+                * self.cfg["training"]["loss_weights"][
+                    "conv_output_hubert_cluster_loss"
+                ]
             )
             + (
                 conv_output_hubert_prj_loss
@@ -432,24 +435,50 @@ class LitBaseHuBERTModel(L.LightningModule):
             lip,
             feature,
             feature_avhubert,
+            feature_hubert_encoder,
+            feature_hubert_prj,
+            feature_hubert_cluster,
             spk_emb,
             feature_len,
+            feature_hubert_len,
             lip_len,
             speaker,
             filename,
         ) = batch
-        pred = self.model(
+
+        (
+            conv_output_mel,
+            conv_output_hubert_prj,
+            conv_output_hubert_cluster,
+            hubert_output_reg,
+            hubert_output_cls,
+        ) = self.model(
             lip=lip,
             audio=None,
             lip_len=lip_len,
             spk_emb=spk_emb,
         )
 
-        noise = torch.randn(
-            pred.shape[0], 1, pred.shape[-1] * self.cfg["data"]["audio"]["hop_length"]
-        ).to(device=pred.device, dtype=pred.dtype)
-        wav_pred = self.pwg(noise, pred)
-        wav_abs = self.pwg(noise, feature)
+        if self.cfg["model"]["decoder"]["vocoder_input_cluster"] == "conv":
+            inputs_dict = self.hifigan.prepare_inputs_dict(
+                feature=conv_output_mel,
+                feature_hubert_encoder=None,
+                feature_hubert_cluster=conv_output_hubert_cluster.argmax(dim=1),
+            )
+        elif self.cfg["model"]["decoder"]["vocoder_input_cluster"] == "hubert":
+            inputs_dict = self.hifigan.prepare_inputs_dict(
+                feature=conv_output_mel,
+                feature_hubert_encoder=hubert_output_reg,
+                feature_hubert_cluster=hubert_output_cls.argmax(dim=1),
+            )
+        wav_pred = self.hifigan.gen(inputs_dict, spk_emb)
+
+        inputs_dict = self.hifigan.prepare_inputs_dict(
+            feature=feature,
+            feature_hubert_encoder=feature_hubert_encoder,
+            feature_hubert_cluster=feature_hubert_cluster,
+        )
+        wav_abs = self.hifigan.gen(inputs_dict, spk_emb)
 
         n_sample_min = min(wav_gt.shape[-1], wav_pred.shape[-1], wav_abs.shape[-1])
         wav_gt = self.process_wav(wav_gt, n_sample_min)
