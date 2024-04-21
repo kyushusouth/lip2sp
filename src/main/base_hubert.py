@@ -85,7 +85,6 @@ def main(cfg: omegaconf.DictConfig) -> None:
         model=model,
         datamodule=datamodule,
         ckpt_path="best",
-        # ckpt_path="/home/minami/lip2sp/checkpoints/base_hubert/20240412_164624/epoch=2-step=15.ckpt",
     )
 
     rename_checkpoint_file(cfg["training"]["checkpoints_save_dir"])
