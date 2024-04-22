@@ -27,6 +27,14 @@ class LitHiFiGANModel(L.LightningModule):
         self.mpd = MultiPeriodDiscriminator()
         self.msd = MultiScaleDiscriminator()
 
+        if cfg["model"]["hifigan"]["freeze"]:
+            for param in self.gen.parameters():
+                param.requires_grad = False
+            for param in self.mpd.parameters():
+                param.requires_grad = False
+            for param in self.msd.parameters():
+                param.requires_grad = False
+
         self.mel_basis = None
         self.hann_window = None
 
@@ -204,10 +212,6 @@ class LitHiFiGANModel(L.LightningModule):
 
     def training_step(self, batch: list, batch_index: int) -> None:
         optim_list = self.optimizers()
-        if not isinstance(optim_list, list):
-            raise ValueError(
-                "Optimizers must be provided for generator and discriminator."
-            )
         optim_g = optim_list[0]
         optim_d = optim_list[1]
 
