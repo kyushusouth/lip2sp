@@ -460,10 +460,6 @@ class LitHiFiGANModel(L.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         scheduler_list = self.lr_schedulers()
-        if not isinstance(scheduler_list, list):
-            raise ValueError(
-                "Schedulers must be provided for generator and discriminator."
-            )
         scheduler_g = scheduler_list[0]
         scheduler_d = scheduler_list[1]
         scheduler_g.step()
