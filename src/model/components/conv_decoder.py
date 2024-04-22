@@ -101,6 +101,11 @@ class ConvDecoderHuBERT(nn.Module):
             cfg["data"]["audio"]["n_mels"] * get_upsample(cfg),
             kernel_size=1,
         )
+        self.out_layer_hubert_encoder = nn.Conv1d(
+            hidden_channels,
+            hidden_channels * get_upsample_hubert(cfg),
+            kernel_size=1,
+        )
         self.out_layer_hubert_cluster = nn.Conv1d(
             hidden_channels,
             (cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1)
@@ -132,6 +137,15 @@ class ConvDecoderHuBERT(nn.Module):
         )
         output_mel = output_mel.permute(0, 2, 1)  # (B, C, T)
 
+        output_hubert_encoder = self.out_layer_hubert_encoder(x)
+        output_hubert_encoder = output_hubert_encoder.permute(0, 2, 1)  # (B, T, C)
+        output_hubert_encoder = output_hubert_encoder.reshape(
+            output_hubert_encoder.shape[0],
+            -1,
+            self.hidden_channels,
+        )
+        output_hubert_encoder = output_hubert_encoder.permute(0, 2, 1)  # (B, C, T)
+
         output_hubert_cluster = self.out_layer_hubert_cluster(x)
         output_hubert_cluster = output_hubert_cluster.permute(0, 2, 1)  # (B, T, C)
         output_hubert_cluster = output_hubert_cluster.reshape(
@@ -150,4 +164,9 @@ class ConvDecoderHuBERT(nn.Module):
         )
         output_hubert_prj = output_hubert_prj.permute(0, 2, 1)  # (B, C, T)
 
-        return output_mel, output_hubert_cluster, output_hubert_prj
+        return (
+            output_mel,
+            output_hubert_encoder,
+            output_hubert_cluster,
+            output_hubert_prj,
+        )
