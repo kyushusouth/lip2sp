@@ -404,9 +404,12 @@ class BaseHuBERTModel(nn.Module):
             feature = torch.cat([feature, spk_emb], dim=-1)
             feature = self.spk_emb_layer(feature)
 
-        conv_output_mel, conv_output_hubert_cluster, conv_output_hubert_prj = (
-            self.conv_decoder(feature)
-        )
+        (
+            conv_output_mel,
+            conv_output_hubert_encoder,
+            conv_output_hubert_cluster,
+            conv_output_hubert_prj,
+        ) = self.conv_decoder(feature)
 
         hubert_decoder_input = conv_output_hubert_prj
         mask_indices = torch.ones(
@@ -447,6 +450,7 @@ class BaseHuBERTModel(nn.Module):
         return (
             conv_output_mel,
             conv_output_hubert_prj,
+            conv_output_hubert_encoder,
             conv_output_hubert_cluster,
             hubert_output_reg,
             hubert_output_cls,
