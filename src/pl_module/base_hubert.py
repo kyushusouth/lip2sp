@@ -45,6 +45,11 @@ class LitBaseHuBERTModel(L.LightningModule):
         if cfg["model"]["decoder"]["hubert"]["freeze"]:
             for param in self.model.hubert_decoder.parameters():
                 param.requires_grad = False
+                
+        self.hifigan = LitHiFiGANModel.load_from_checkpoint(
+            cfg["model"]["hifigan"]["model_path"],
+            cfg=cfg,
+        )
 
         self.loss_fn = LossFunctions()
 
@@ -92,18 +97,12 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.train_mel_example = {"gt": None, "pred": None}
         self.val_mel_example = {"gt": None, "pred": None}
 
-        self.hifigan = LitHiFiGANModel.load_from_checkpoint(
-            cfg["model"]["hifigan"]["model_path"],
-            cfg=cfg,
-        )
-        self.hifigan.eval()
-
     def convert_loss_nan_to_zero(self, loss):
         if torch.isnan(loss):
             loss = torch.tensor(0.0).to(dtype=torch.float32, device=self.device)
         return loss
 
-    def calc_losses(self, batch):
+    def calc_losses(self, batch: list) -> tuple:
         (
             wav,
             lip,
@@ -151,6 +150,8 @@ class LitBaseHuBERTModel(L.LightningModule):
             padding_mask_lip=padding_mask_lip,
             padding_mask_feature_hubert=padding_mask_feature_hubert,
         )
+        
+        breakpoint()
 
         conv_output_mel_loss = self.loss_fn.l1_loss(
             pred=conv_output_mel, target=feature, mask=padding_mask_feature
@@ -777,6 +778,9 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.test_data_list += data
 
     def on_test_start(self) -> None:
+        self.model.eval()
+        self.hifigan.eval()
+
         self.test_data_columns = [
             "speaker",
             "filename",
