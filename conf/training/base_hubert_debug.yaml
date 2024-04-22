@@ -8,8 +8,8 @@ monitoring_mode: "min"
 early_stopping_patience: 10
 save_checkpoint_every_n_epochs: 1
 save_checkpoint_top_k: 1
-limit_train_batches: 8
-limit_val_batches: 8
+limit_train_batches: 10
+limit_val_batches: 10
 limit_test_batches: 2
 log_every_n_steps: 10
 precision: "16-mixed"
