@@ -62,9 +62,9 @@ class BaseHuBERTModel(nn.Module):
                 hidden_channels,
             )
 
-        if cfg["model"]["use_spk_emb"]:
+        if cfg["model"]["spk_emb_layer"]["use"]:
             self.spk_emb_layer = nn.Linear(
-                hidden_channels + cfg["model"]["spk_emb_dim"],
+                hidden_channels + cfg["model"]["spk_emb_layer"]["dim"],
                 hidden_channels,
             )
 
@@ -399,7 +399,7 @@ class BaseHuBERTModel(nn.Module):
             feature = torch.concat([feature_raven, feature_vatlm], dim=-1)
             feature = self.fuse_layer(feature)
 
-        if self.cfg["model"]["use_spk_emb"]:
+        if self.cfg["model"]["spk_emb_layer"]["use"]:
             spk_emb = spk_emb.unsqueeze(1).expand(-1, feature.shape[1], -1)  # (B, T, C)
             feature = torch.cat([feature, spk_emb], dim=-1)
             feature = self.spk_emb_layer(feature)
