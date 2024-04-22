@@ -34,12 +34,16 @@ class LitBaseHuBERTModel(L.LightningModule):
             for param in self.model.avhubert.parameters():
                 param.requires_grad = False
 
+        if cfg["model"]["spk_emb_layer"]["freeze"]:
+            for param in self.model.spk_emb_layer.parameters():
+                param.requires_grad = False
+
         if cfg["model"]["decoder"]["conv"]["freeze"]:
             for param in self.model.conv_decoder.parameters():
                 param.requires_grad = False
 
         if cfg["model"]["decoder"]["hubert"]["freeze"]:
-            for param in self.model.hubert_decoder.hubert.parameters():
+            for param in self.model.hubert_decoder.parameters():
                 param.requires_grad = False
 
         self.loss_fn = LossFunctions()
