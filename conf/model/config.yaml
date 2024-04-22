@@ -6,7 +6,10 @@ defaults:
   - hifigan: base
   - decoder: config
 
+spk_emb_layer:
+  use: true
+  dim: 256
+  freeze: false
+
 ssl_type: avhubert
 ssl_feature_dropout: 0
-use_spk_emb: true
-spk_emb_dim: 256
