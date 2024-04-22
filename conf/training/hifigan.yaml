@@ -3,7 +3,7 @@ batch_size: 16
 num_workers: 16
 input_sec: 1
 seed: 42
-monitoring_metric: "val_loss_gen_all"
+monitoring_metric: "val_loss_mel"
 monitoring_mode: "min"
 early_stopping_patience: 40
 save_checkpoint_every_n_epochs: 1

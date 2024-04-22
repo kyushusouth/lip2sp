@@ -21,6 +21,7 @@ finetune: false
 finetune_start_model_path:
 loss_weights:
   conv_output_mel_loss: 1.0
+  conv_output_hubert_encoder_loss: 0.0
   conv_output_hubert_cluster_loss: 0.0
   conv_output_hubert_prj_loss: 1.0
   hubert_output_reg_masked_loss: 1.0

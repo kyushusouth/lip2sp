@@ -1,4 +1,4 @@
-max_epoch: 3
+max_epoch: 2
 batch_size: 4
 num_workers: 4
 input_sec: 10
@@ -8,26 +8,27 @@ monitoring_mode: "min"
 early_stopping_patience: 10
 save_checkpoint_every_n_epochs: 1
 save_checkpoint_top_k: 1
-limit_train_batches: 10
-limit_val_batches: 10
-limit_test_batches: 10
+limit_train_batches: 8
+limit_val_batches: 8
+limit_test_batches: 2
 log_every_n_steps: 10
 precision: "16-mixed"
 accumulate_grad_batches: 8
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
-checkpoints_save_dir: "~/lip2sp/checkpoints/debug"
+checkpoints_save_dir: "~/lip2sp/checkpoints/debug_base_hubert"
 finetune: true
 finetune_start_model_path: "/home/minami/lip2sp/checkpoints/base_hubert/20240418_130654/epoch:24-step:625.ckpt"
 loss_weights:
   conv_output_mel_loss: 1.0
-  conv_output_hubert_cluster_loss: 0.0
+  conv_output_hubert_encoder_loss: 1.0
+  conv_output_hubert_cluster_loss: 1.0
   conv_output_hubert_prj_loss: 1.0
   hubert_output_reg_masked_loss: 1.0
-  hubert_output_reg_unmasked_loss: 0.0
+  hubert_output_reg_unmasked_loss: 1.0
   hubert_output_reg_loss: 1.0
   hubert_output_cls_masked_loss: 1.0
-  hubert_output_cls_unmasked_loss: 0.0
+  hubert_output_cls_unmasked_loss: 1.0
   hubert_output_cls_loss: 1.0
 optimizer:
   learning_rate: 1.0e-3
