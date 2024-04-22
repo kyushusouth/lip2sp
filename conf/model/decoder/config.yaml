@@ -10,7 +10,7 @@ hubert:
   kmeans: hifi_captain
   n_clusters: 200
   ignore_index: 0
-  freeze: false
+  freeze: true
   encoder_input_mask:
     use: true
     mask_prob: 0.8

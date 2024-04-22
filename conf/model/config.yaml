@@ -9,7 +9,7 @@ defaults:
 spk_emb_layer:
   use: true
   dim: 256
-  freeze: false
+  freeze: true
 
 ssl_type: avhubert
 ssl_feature_dropout: 0

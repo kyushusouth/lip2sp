@@ -7,6 +7,7 @@ upsample_kernel_sizes: [11, 8, 8, 4, 4]
 input: "cat_mel_hubert_encoder"
 embedding_dim: 128
 model_path: "/home/minami/lip2sp/checkpoints/hifigan/20240418_083428/epoch:27-step:36400.ckpt"
+freeze: false
 loss:
   n_mels: 80
   n_fft: 1024
