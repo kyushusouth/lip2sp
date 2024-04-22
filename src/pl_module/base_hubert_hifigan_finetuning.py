@@ -68,7 +68,7 @@ class LitBaseHuBERTHiFiGANFineTuning(LitBaseHuBERTModel):
         hubert_output_reg_list = []
         hubert_output_cls_list = []
         wav_list = []
-        for i in range(self.cfg["training"]["batch_size"]):
+        for i in range(wav.shape[0]):
             input_len_hubert = int(
                 self.cfg["training"]["input_sec_hifigan"]
                 * self.cfg["data"]["video"]["fps"]
