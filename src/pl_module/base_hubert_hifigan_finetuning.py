@@ -50,6 +50,7 @@ class LitBaseHuBERTHiFiGANFineTuning(LitBaseHuBERTModel):
             (
                 conv_output_mel,
                 conv_output_hubert_prj,
+                conv_output_hubert_encoder,
                 conv_output_hubert_cluster,
                 hubert_output_reg,
                 hubert_output_cls,
