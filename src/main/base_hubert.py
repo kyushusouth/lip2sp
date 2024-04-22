@@ -25,11 +25,10 @@ def main(cfg: omegaconf.DictConfig) -> None:
 
     if cfg["training"]["finetune"]:
         model = LitBaseHuBERTModel.load_from_checkpoint(
-            checkpoint_path=cfg["training"]["finetune_start_model_path"],
-            cfg=cfg,
+            checkpoint_path=cfg["training"]["finetune_start_model_path"], cfg=cfg
         )
     else:
-        model = LitBaseHuBERTModel(cfg)
+        model = LitBaseHuBERTModel(cfg=cfg)
 
     wandb_logger = WandbLogger(
         project=cfg["training"]["wandb"]["project_name"],
