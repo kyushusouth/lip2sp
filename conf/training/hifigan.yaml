@@ -1,6 +1,6 @@
 max_epoch: 30
 batch_size: 16
-num_workers: 16
+num_workers: 8
 input_sec: 1
 seed: 42
 monitoring_metric: "val_loss_mel"
