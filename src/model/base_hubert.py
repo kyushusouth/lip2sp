@@ -411,11 +411,13 @@ class BaseHuBERTModel(nn.Module):
             conv_output_hubert_prj,
         ) = self.conv_decoder(feature)
 
+        # encoder_input_maskを利用しない場合は、すべて予測値を用いる
         hubert_decoder_input = conv_output_hubert_prj
         mask_indices = torch.ones(
             feature_hubert_prj.shape[0], feature_hubert_prj.shape[2]
         ).to(dtype=torch.bool, device=lip.device)
 
+        # encoder_input_maskを用いる場合、原音声と合成音声を混ぜる
         if self.cfg["model"]["decoder"]["hubert"]["encoder_input_mask"]["use"]:
             mask_indices = torch.from_numpy(
                 self.compute_mask_indices(
