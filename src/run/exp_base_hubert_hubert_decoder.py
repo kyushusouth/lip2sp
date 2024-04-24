@@ -168,7 +168,7 @@ def run_hubert(
 
 
 def main():
-    debug = True
+    debug = False
     hifigan_model_path = {
         "cat_mel_hubert_encoder": Path(
             "/home/minami/lip2sp/checkpoints/debug_hifigan/20240424_145534/epoch:1-step:40.ckpt"

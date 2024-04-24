@@ -78,31 +78,31 @@ def run(
             "training.finetune=false",
         ]
     )
-    subprocess.run(
-        [
-            "python",
-            str(base_hubert_hifigan_finetuning_script_path),
-            "data_choice.kablab.use=true",
-            "data_choice.jvs.use=false",
-            "data_choice.hifi_captain.use=false",
-            "data_choice.jsut.use=false",
-            f"model.hifigan.input={hifigan_input}",
-            f"model.hifigan.model_path={str(get_last_checkpoint_path(hifigan_checkpoint_dir))}",
-            "model.hifigan.freeze=false",
-            "model.avhubert.freeze=true",
-            "model.spk_emb_layer.freeze=true",
-            "model.decoder.conv.freeze=true",
-            "model.decoder.hubert.freeze=true",
-            "model.decoder.hubert.encoder_input_mask.use=false",
-            "model.decoder.vocoder_input_cluster=conv",
-            "training=base_hubert_hifigan_finetuning_debug"
-            if debug
-            else "training=base_hubert_hifigan_finetuning",
-            f"training.wandb.group_name={group_name}",
-            "training.finetune=true",
-            f"training.finetune_start_model_path={str(get_last_checkpoint_path(base_hubert_checkpoint_dir))}",
-        ]
-    )
+    # subprocess.run(
+    #     [
+    #         "python",
+    #         str(base_hubert_hifigan_finetuning_script_path),
+    #         "data_choice.kablab.use=true",
+    #         "data_choice.jvs.use=false",
+    #         "data_choice.hifi_captain.use=false",
+    #         "data_choice.jsut.use=false",
+    #         f"model.hifigan.input={hifigan_input}",
+    #         f"model.hifigan.model_path={str(get_last_checkpoint_path(hifigan_checkpoint_dir))}",
+    #         "model.hifigan.freeze=false",
+    #         "model.avhubert.freeze=true",
+    #         "model.spk_emb_layer.freeze=true",
+    #         "model.decoder.conv.freeze=true",
+    #         "model.decoder.hubert.freeze=true",
+    #         "model.decoder.hubert.encoder_input_mask.use=false",
+    #         "model.decoder.vocoder_input_cluster=conv",
+    #         "training=base_hubert_hifigan_finetuning_debug"
+    #         if debug
+    #         else "training=base_hubert_hifigan_finetuning",
+    #         f"training.wandb.group_name={group_name}",
+    #         "training.finetune=true",
+    #         f"training.finetune_start_model_path={str(get_last_checkpoint_path(base_hubert_checkpoint_dir))}",
+    #     ]
+    # )
 
 
 def main():

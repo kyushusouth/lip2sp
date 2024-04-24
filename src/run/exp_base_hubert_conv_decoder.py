@@ -97,7 +97,7 @@ def run_conv_decoder(
 
 
 def main():
-    debug = True
+    debug = False
     hifigan_script_path = Path("/home/minami/lip2sp/src/main/hifigan.py")
     hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/hifigan")
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
