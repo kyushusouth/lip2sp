@@ -12,8 +12,8 @@ hubert:
   ignore_index: 0
   freeze: true
   encoder_input_mask:
-    use: true
+    use: false
     mask_prob: 0.8
     mask_length: 10
 
-vocoder_input_cluster: hubert
+vocoder_input_cluster: conv

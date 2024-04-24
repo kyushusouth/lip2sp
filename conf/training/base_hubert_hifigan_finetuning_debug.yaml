@@ -9,8 +9,8 @@ monitoring_mode: "min"
 early_stopping_patience: 40
 save_checkpoint_every_n_epochs: 1
 save_checkpoint_top_k: 1
-limit_train_batches: 10
-limit_val_batches: 2
+limit_train_batches: 1.0
+limit_val_batches: 1.0
 limit_test_batches: 2
 log_every_n_steps: 10
 precision: "16-mixed"
@@ -18,8 +18,8 @@ accumulate_grad_batches: 1
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
 checkpoints_save_dir: "~/lip2sp/checkpoints/debug_base_hubert_hifigan_finetuning"
-finetune: false
-finetune_start_model_path:
+finetune: true
+finetune_start_model_path: "/home/minami/lip2sp/checkpoints/base_hubert/20240423_172656/epoch:36-step:925.ckpt"
 optimizer:
   type: adamw
   learning_rate: 2.0e-4
