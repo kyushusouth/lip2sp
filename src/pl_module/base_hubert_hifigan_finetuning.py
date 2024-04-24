@@ -76,7 +76,15 @@ class LitBaseHuBERTHiFiGANFineTuning(LitBaseHuBERTModel):
             )
             start_index_hubert = random.randint(
                 0,
-                int(lip_len[i] * get_upsample_hubert(self.cfg)) - input_len_hubert,
+                int(
+                    min(
+                        lip_len[i],
+                        self.cfg["training"]["input_sec"]
+                        * self.cfg["data"]["video"]["fps"],
+                    )
+                    * get_upsample_hubert(self.cfg)
+                )
+                - input_len_hubert,
             )
             input_len_conv_output_mel = int(
                 input_len_hubert
