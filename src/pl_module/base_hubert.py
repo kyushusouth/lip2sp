@@ -46,11 +46,6 @@ class LitBaseHuBERTModel(L.LightningModule):
             for param in self.model.hubert_decoder.parameters():
                 param.requires_grad = False
 
-        self.hifigan = LitHiFiGANModel.load_from_checkpoint(
-            cfg["model"]["hifigan"]["model_path"],
-            cfg=cfg,
-        )
-
         self.loss_fn = LossFunctions()
 
         self.train_step_conv_output_mel_loss_list = []
@@ -723,7 +718,7 @@ class LitBaseHuBERTModel(L.LightningModule):
         if self.cfg["model"]["decoder"]["vocoder_input_cluster"] == "conv":
             inputs_dict = self.hifigan.prepare_inputs_dict(
                 feature=conv_output_mel,
-                feature_hubert_encoder=None,
+                feature_hubert_encoder=conv_output_hubert_encoder,
                 feature_hubert_cluster=conv_output_hubert_cluster.argmax(dim=1),
             )
         elif self.cfg["model"]["decoder"]["vocoder_input_cluster"] == "hubert":
@@ -830,6 +825,11 @@ class LitBaseHuBERTModel(L.LightningModule):
 
     def on_test_start(self) -> None:
         self.model.eval()
+
+        self.hifigan = LitHiFiGANModel.load_from_checkpoint(
+            self.cfg["model"]["hifigan"]["model_path"],
+            cfg=self.cfg,
+        )
         self.hifigan.eval()
 
         self.test_data_columns = [
