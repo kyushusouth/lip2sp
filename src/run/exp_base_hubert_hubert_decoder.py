@@ -171,10 +171,10 @@ def main():
     debug = False
     hifigan_model_path = {
         "cat_mel_hubert_encoder": Path(
-            "/home/minami/lip2sp/checkpoints/debug_hifigan/20240424_145534/epoch:1-step:40.ckpt"
+            "/home/minami/lip2sp/checkpoints/hifigan/20240426_035112/epoch:19-step:26000.ckpt"
         ),
         "cat_mel_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/debug_hifigan/20240424_150324/epoch:1-step:40.ckpt"
+            "/home/minami/lip2sp/checkpoints/hifigan/20240427_004201/epoch:28-step:37700.ckpt"
         ),
     }
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
