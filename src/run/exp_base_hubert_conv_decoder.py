@@ -103,23 +103,33 @@ def main():
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
     if debug:
         hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/debug_hifigan")
+    # run_conv_decoder(
+    #     hifigan_script_path=hifigan_script_path,
+    #     hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+    #     base_hubert_script_path=base_hubert_script_path,
+    #     hifigan_input="cat_mel_hubert_encoder",
+    #     group_name="conv_decoder",
+    #     conv_output_hubert_encoder_loss=1.0,
+    #     conv_output_hubert_cluster_loss=0.0,
+    #     debug=debug,
+    # )
+    # run_conv_decoder(
+    #     hifigan_script_path=hifigan_script_path,
+    #     hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+    #     base_hubert_script_path=base_hubert_script_path,
+    #     hifigan_input="cat_mel_hubert_cluster",
+    #     group_name="conv_decoder",
+    #     conv_output_hubert_encoder_loss=0.0,
+    #     conv_output_hubert_cluster_loss=1.0,
+    #     debug=debug,
+    # )
     run_conv_decoder(
         hifigan_script_path=hifigan_script_path,
         hifigan_checkpoint_dir=hifigan_checkpoint_dir,
         base_hubert_script_path=base_hubert_script_path,
-        hifigan_input="cat_mel_hubert_encoder",
+        hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
         group_name="conv_decoder",
         conv_output_hubert_encoder_loss=1.0,
-        conv_output_hubert_cluster_loss=0.0,
-        debug=debug,
-    )
-    run_conv_decoder(
-        hifigan_script_path=hifigan_script_path,
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-        base_hubert_script_path=base_hubert_script_path,
-        hifigan_input="cat_mel_hubert_cluster",
-        group_name="conv_decoder",
-        conv_output_hubert_encoder_loss=0.0,
         conv_output_hubert_cluster_loss=1.0,
         debug=debug,
     )
