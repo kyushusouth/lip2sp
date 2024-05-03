@@ -118,7 +118,6 @@ def main():
     if debug:
         hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/debug_hifigan")
     loss_weight_list = [0.1, 0.5, 1.0]
-
     for loss_weight in loss_weight_list:
         run_conv_decoder(
             hifigan_script_path=hifigan_script_path,
@@ -129,22 +128,21 @@ def main():
             group_name="conv_decoder",
             conv_output_hubert_encoder_loss=loss_weight,
             conv_output_hubert_cluster_loss=0.0,
-            learning_rate=1.0e-4,
+            learning_rate=1.0e-3,
             debug=debug,
         )
-    for loss_weight in loss_weight_list:
-        run_conv_decoder(
-            hifigan_script_path=hifigan_script_path,
-            hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-            hifigan_model_path=hifigan_model_path["cat_mel_hubert_cluster"],
-            base_hubert_script_path=base_hubert_script_path,
-            hifigan_input="cat_mel_hubert_cluster",
-            group_name="conv_decoder",
-            conv_output_hubert_encoder_loss=0.0,
-            conv_output_hubert_cluster_loss=loss_weight,
-            learning_rate=1.0e-4,
-            debug=debug,
-        )
+    run_conv_decoder(
+        hifigan_script_path=hifigan_script_path,
+        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+        hifigan_model_path=hifigan_model_path["cat_mel_hubert_cluster"],
+        base_hubert_script_path=base_hubert_script_path,
+        hifigan_input="cat_mel_hubert_cluster",
+        group_name="conv_decoder",
+        conv_output_hubert_encoder_loss=0.0,
+        conv_output_hubert_cluster_loss=0.1,
+        learning_rate=1.0e-3,
+        debug=debug,
+    )
     for loss_weight in loss_weight_list:
         run_conv_decoder(
             hifigan_script_path=hifigan_script_path,
@@ -156,8 +154,8 @@ def main():
             hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
             group_name="conv_decoder",
             conv_output_hubert_encoder_loss=loss_weight,
-            conv_output_hubert_cluster_loss=loss_weight,
-            learning_rate=1.0e-4,
+            conv_output_hubert_cluster_loss=0.1,
+            learning_rate=1.0e-3,
             debug=debug,
         )
 
