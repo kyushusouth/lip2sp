@@ -38,11 +38,9 @@ class BaseHuBERTDataset(Dataset):
         self.embs.update(get_spk_emb_jvs(cfg))
         self.embs.update(get_spk_emb_hifi_captain(cfg))
         self.embs.update(get_spk_emb_jsut(cfg))
-        self.lip_mean = torch.from_numpy(np.array([cfg["data"]["video"]["lip_mean"]]))
-        self.lip_std = torch.from_numpy(np.array([cfg["data"]["video"]["lip_std"]]))
-        feat_mean_var_std = np.load(
-            str(Path(cfg["path"]["vctk"]["stat_path"]).expanduser())
-        )
+        self.lip_mean = torch.from_numpy(np.array([cfg.data.video.lip_mean]))
+        self.lip_std = torch.from_numpy(np.array([cfg.data.video.lip_std]))
+        feat_mean_var_std = np.load(str(Path(cfg.path.vctk.stat_path).expanduser()))
         self.feat_mean = torch.from_numpy(feat_mean_var_std["feat_mean"])
         self.feat_std = torch.from_numpy(feat_mean_var_std["feat_std"])
 
@@ -63,7 +61,7 @@ class BaseHuBERTDataset(Dataset):
         filename = self.data_path_list[index]["filename"]
         spk_emb = torch.from_numpy(self.embs[speaker])
 
-        wav, _ = librosa.load(str(audio_path), sr=self.cfg["data"]["audio"]["sr"])
+        wav, _ = librosa.load(str(audio_path), sr=self.cfg.data.audio.sr)
         wav = wav / np.max(np.abs(wav))  # (T,)
         feature = wav2mel(wav, self.cfg, ref_max=False)  # (C, T)
         feature_avhubert = wav2mel_avhubert(wav, self.cfg)  # (C, T)
@@ -89,9 +87,9 @@ class BaseHuBERTDataset(Dataset):
             int(lip.shape[0]),
         )
 
-        wav = wav[: int(self.cfg["data"]["audio"]["hop_length"] * upsample * lip_len)]
+        wav = wav[: int(self.cfg.data.audio.hop_length * upsample * lip_len)]
         wav_padded = np.zeros(
-            (int(self.cfg["data"]["audio"]["hop_length"] * upsample * lip_len))
+            (int(self.cfg.data.audio.hop_length * upsample * lip_len))
         )
         wav_padded[: wav.shape[0]] = wav
         wav = wav_padded

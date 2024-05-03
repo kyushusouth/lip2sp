@@ -15,21 +15,19 @@ class BaseHuBERTDataModule(L.LightningDataModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.batch_size = cfg["training"]["batch_size"]
+        self.batch_size = cfg.training.batch_size
 
     def get_kablab_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
-        audio_dir = Path(self.cfg["path"]["kablab"]["audio_dir"]).expanduser()
-        video_dir = Path(self.cfg["path"]["kablab"]["video_dir"]).expanduser()
+        audio_dir = Path(self.cfg.path.kablab.audio_dir).expanduser()
+        video_dir = Path(self.cfg.path.kablab.video_dir).expanduser()
         hubert_feature_prj_output_dir = Path(
-            self.cfg["path"]["kablab"]["hubert_feature_prj_output_dir"]
+            self.cfg.path.kablab.hubert_feature_prj_output_dir
         ).expanduser()
         hubert_encoder_output_dir = Path(
-            self.cfg["path"]["kablab"]["hubert_encoder_output_dir"]
+            self.cfg.path.kablab.hubert_encoder_output_dir
         ).expanduser()
-        hubert_cluster_dir = Path(
-            self.cfg["path"]["kablab"]["hubert_cluster_dir"]
-        ).expanduser()
+        hubert_cluster_dir = Path(self.cfg.path.kablab.hubert_cluster_dir).expanduser()
         data_path_list = []
         for i, row in df.iterrows():
             audio_path = audio_dir / row["speaker"] / f'{row["filename"]}.wav'
@@ -44,8 +42,8 @@ class BaseHuBERTDataModule(L.LightningDataModule):
             )
             hubert_cluster_path = (
                 hubert_cluster_dir
-                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
-                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
+                / self.cfg.model.decoder.hubert.kmeans
+                / str(self.cfg.model.decoder.hubert.n_clusters)
                 / row["speaker"]
                 / f'{row["filename"]}.npy'
             )
@@ -73,15 +71,15 @@ class BaseHuBERTDataModule(L.LightningDataModule):
 
     def get_hifi_captain_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
-        audio_dir = Path(self.cfg["path"]["hifi_captain"]["audio_dir"]).expanduser()
+        audio_dir = Path(self.cfg.path.hifi_captain.audio_dir).expanduser()
         hubert_feature_prj_output_dir = Path(
-            self.cfg["path"]["hifi_captain"]["hubert_feature_prj_output_dir"]
+            self.cfg.path.hifi_captain.hubert_feature_prj_output_dir
         ).expanduser()
         hubert_encoder_output_dir = Path(
-            self.cfg["path"]["hifi_captain"]["hubert_encoder_output_dir"]
+            self.cfg.path.hifi_captain.hubert_encoder_output_dir
         ).expanduser()
         hubert_cluster_dir = Path(
-            self.cfg["path"]["hifi_captain"]["hubert_cluster_dir"]
+            self.cfg.path.hifi_captain.hubert_cluster_dir
         ).expanduser()
         data_path_list = []
         for i, row in df.iterrows():
@@ -108,8 +106,8 @@ class BaseHuBERTDataModule(L.LightningDataModule):
             )
             hubert_cluster_path = (
                 hubert_cluster_dir
-                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
-                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
+                / self.cfg.model.decoder.hubert.kmeans
+                / str(self.cfg.model.decoder.hubert.n_clusters)
                 / row["speaker"]
                 / "wav"
                 / row["parent_dir"]
@@ -137,16 +135,14 @@ class BaseHuBERTDataModule(L.LightningDataModule):
 
     def get_jvs_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
-        audio_dir = Path(self.cfg["path"]["jvs"]["audio_dir"]).expanduser()
+        audio_dir = Path(self.cfg.path.jvs.audio_dir).expanduser()
         hubert_feature_prj_output_dir = Path(
-            self.cfg["path"]["jvs"]["hubert_feature_prj_output_dir"]
+            self.cfg.path.jvs.hubert_feature_prj_output_dir
         ).expanduser()
         hubert_encoder_output_dir = Path(
-            self.cfg["path"]["jvs"]["hubert_encoder_output_dir"]
+            self.cfg.path.jvs.hubert_encoder_output_dir
         ).expanduser()
-        hubert_cluster_dir = Path(
-            self.cfg["path"]["jvs"]["hubert_cluster_dir"]
-        ).expanduser()
+        hubert_cluster_dir = Path(self.cfg.path.jvs.hubert_cluster_dir).expanduser()
         data_path_list = []
         for i, row in df.iterrows():
             audio_path = (
@@ -172,8 +168,8 @@ class BaseHuBERTDataModule(L.LightningDataModule):
             )
             hubert_cluster_path = (
                 hubert_cluster_dir
-                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
-                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
+                / self.cfg.model.decoder.hubert.kmeans
+                / str(self.cfg.model.decoder.hubert.n_clusters)
                 / row["speaker"]
                 / row["data"]
                 / "wav24kHz16bit"
@@ -201,16 +197,14 @@ class BaseHuBERTDataModule(L.LightningDataModule):
 
     def get_jsut_path_list(self, df: pd.DataFrame, data_split: str) -> list:
         df = df.loc[df["data_split"] == data_split]
-        audio_dir = Path(self.cfg["path"]["jsut"]["audio_dir"]).expanduser()
+        audio_dir = Path(self.cfg.path.jsut.audio_dir).expanduser()
         hubert_feature_prj_output_dir = Path(
-            self.cfg["path"]["jsut"]["hubert_feature_prj_output_dir"]
+            self.cfg.path.jsut.hubert_feature_prj_output_dir
         ).expanduser()
         hubert_encoder_output_dir = Path(
-            self.cfg["path"]["jsut"]["hubert_encoder_output_dir"]
+            self.cfg.path.jsut.hubert_encoder_output_dir
         ).expanduser()
-        hubert_cluster_dir = Path(
-            self.cfg["path"]["jsut"]["hubert_cluster_dir"]
-        ).expanduser()
+        hubert_cluster_dir = Path(self.cfg.path.jsut.hubert_cluster_dir).expanduser()
         data_path_list = []
         for i, row in df.iterrows():
             audio_path = audio_dir / row["dirname"] / "wav" / f'{row["filename"]}.wav'
@@ -228,8 +222,8 @@ class BaseHuBERTDataModule(L.LightningDataModule):
             )
             hubert_cluster_path = (
                 hubert_cluster_dir
-                / self.cfg["model"]["decoder"]["hubert"]["kmeans"]
-                / str(self.cfg["model"]["decoder"]["hubert"]["n_clusters"])
+                / self.cfg.model.decoder.hubert.kmeans
+                / str(self.cfg.model.decoder.hubert.n_clusters)
                 / row["dirname"]
                 / "wav"
                 / f'{row["filename"]}.npy'
@@ -258,34 +252,26 @@ class BaseHuBERTDataModule(L.LightningDataModule):
         train_data_path_list = []
         val_data_path_list = []
         test_data_path_list = []
-        if self.cfg["data_choice"]["kablab"]["use"]:
-            df = pd.read_csv(
-                str(Path(self.cfg["path"]["kablab"]["df_path"]).expanduser())
-            )
-            df = df.loc[
-                df["speaker"].isin(self.cfg["data_choice"]["kablab"]["speaker"])
-            ]
-            df = df.loc[df["corpus"].isin(self.cfg["data_choice"]["kablab"]["corpus"])]
+        if self.cfg.data_choice.kablab.use:
+            df = pd.read_csv(str(Path(self.cfg.path.kablab.df_path).expanduser()))
+            df = df.loc[df["speaker"].isin(self.cfg.data_choice.kablab.speaker)]
+            df = df.loc[df["corpus"].isin(self.cfg.data_choice.kablab.corpus)]
             train_data_path_list += self.get_kablab_path_list(df, "train")
             val_data_path_list += self.get_kablab_path_list(df, "val")
             test_data_path_list += self.get_kablab_path_list(df, "test")
-        if self.cfg["data_choice"]["hifi_captain"]["use"]:
-            df = pd.read_csv(
-                str(Path(self.cfg["path"]["hifi_captain"]["df_path"]).expanduser())
-            )
+        if self.cfg.data_choice.hifi_captain.use:
+            df = pd.read_csv(str(Path(self.cfg.path.hifi_captain.df_path).expanduser()))
             train_data_path_list += self.get_hifi_captain_path_list(df, "train")
             val_data_path_list += self.get_hifi_captain_path_list(df, "val")
             test_data_path_list += self.get_hifi_captain_path_list(df, "test")
-        if self.cfg["data_choice"]["jvs"]["use"]:
-            df = pd.read_csv(str(Path(self.cfg["path"]["jvs"]["df_path"]).expanduser()))
+        if self.cfg.data_choice.jvs.use:
+            df = pd.read_csv(str(Path(self.cfg.path.jvs.df_path).expanduser()))
             df = df.loc[(df["data"] == "parallel100") | (df["data"] == "nonpara30")]
             train_data_path_list += self.get_jvs_path_list(df, "train")
             val_data_path_list += self.get_jvs_path_list(df, "val")
             test_data_path_list += self.get_jvs_path_list(df, "test")
-        if self.cfg["data_choice"]["jsut"]["use"]:
-            df = pd.read_csv(
-                str(Path(self.cfg["path"]["jsut"]["df_path"]).expanduser())
-            )
+        if self.cfg.data_choice.jsut.use:
+            df = pd.read_csv(str(Path(self.cfg.path.jsut.df_path).expanduser()))
             train_data_path_list += self.get_jsut_path_list(df, "train")
             val_data_path_list += self.get_jsut_path_list(df, "val")
             test_data_path_list += self.get_jsut_path_list(df, "test")
@@ -312,7 +298,7 @@ class BaseHuBERTDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.train_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["num_workers"],
+            num_workers=self.cfg.training.num_workers,
             shuffle=True,
             pin_memory=True,
             drop_last=False,
@@ -323,7 +309,7 @@ class BaseHuBERTDataModule(L.LightningDataModule):
         return DataLoader(
             dataset=self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.cfg["training"]["num_workers"],
+            num_workers=self.cfg.training.num_workers,
             shuffle=False,
             pin_memory=True,
             drop_last=False,

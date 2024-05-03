@@ -25,24 +25,24 @@ class LitBaseHuBERTModel(L.LightningModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.learning_rate = cfg["training"]["optimizer"]["learning_rate"]
+        self.learning_rate = cfg.training.optimizer.learning_rate
         self.automatic_optimization = True
 
         self.model = BaseHuBERTModel(cfg)
 
-        if cfg["model"]["avhubert"]["freeze"]:
+        if cfg.model.avhubert.freeze:
             for param in self.model.avhubert.parameters():
                 param.requires_grad = False
 
-        if cfg["model"]["spk_emb_layer"]["freeze"]:
+        if cfg.model.spk_emb_layer.freeze:
             for param in self.model.spk_emb_layer.parameters():
                 param.requires_grad = False
 
-        if cfg["model"]["decoder"]["conv"]["freeze"]:
+        if cfg.model.decoder.conv.freeze:
             for param in self.model.conv_decoder.parameters():
                 param.requires_grad = False
 
-        if cfg["model"]["decoder"]["hubert"]["freeze"]:
+        if cfg.model.decoder.hubert.freeze:
             for param in self.model.hubert_decoder.parameters():
                 param.requires_grad = False
 
@@ -188,10 +188,10 @@ class LitBaseHuBERTModel(L.LightningModule):
         )
         hubert_output_reg_loss = (
             hubert_output_reg_masked_loss
-            * self.cfg["training"]["loss_weights"]["hubert_output_reg_masked_loss"]
+            * self.cfg.training.loss_weights.hubert_output_reg_masked_loss
         ) + (
             hubert_output_reg_unmasked_loss
-            * self.cfg["training"]["loss_weights"]["hubert_output_reg_unmasked_loss"]
+            * self.cfg.training.loss_weights.hubert_output_reg_unmasked_loss
         )
 
         hubert_output_cls_masked_loss = torch.nn.functional.cross_entropy(
@@ -216,40 +216,33 @@ class LitBaseHuBERTModel(L.LightningModule):
         )
         hubert_output_cls_loss = (
             hubert_output_cls_masked_loss
-            * self.cfg["training"]["loss_weights"]["hubert_output_cls_masked_loss"]
+            * self.cfg.training.loss_weights.hubert_output_cls_masked_loss
         ) + (
             hubert_output_cls_unmasked_loss
-            * self.cfg["training"]["loss_weights"]["hubert_output_cls_unmasked_loss"]
+            * self.cfg.training.loss_weights.hubert_output_cls_unmasked_loss
         )
 
         total_loss = (
-            (
-                conv_output_mel_loss
-                * self.cfg["training"]["loss_weights"]["conv_output_mel_loss"]
-            )
+            (conv_output_mel_loss * self.cfg.training.loss_weights.conv_output_mel_loss)
             + (
                 conv_output_hubert_encoder_loss
-                * self.cfg["training"]["loss_weights"][
-                    "conv_output_hubert_encoder_loss"
-                ]
+                * self.cfg.training.loss_weights["conv_output_hubert_encoder_loss"]
             )
             + (
                 conv_output_hubert_cluster_loss
-                * self.cfg["training"]["loss_weights"][
-                    "conv_output_hubert_cluster_loss"
-                ]
+                * self.cfg.training.loss_weights["conv_output_hubert_cluster_loss"]
             )
             + (
                 conv_output_hubert_prj_loss
-                * self.cfg["training"]["loss_weights"]["conv_output_hubert_prj_loss"]
+                * self.cfg.training.loss_weights.conv_output_hubert_prj_loss
             )
             + (
                 hubert_output_reg_loss
-                * self.cfg["training"]["loss_weights"]["hubert_output_reg_loss"]
+                * self.cfg.training.loss_weights.hubert_output_reg_loss
             )
             + (
                 hubert_output_cls_loss
-                * self.cfg["training"]["loss_weights"]["hubert_output_cls_loss"]
+                * self.cfg.training.loss_weights.hubert_output_cls_loss
             )
         )
         return (
@@ -289,67 +282,67 @@ class LitBaseHuBERTModel(L.LightningModule):
             "train_conv_output_mel_loss",
             conv_output_mel_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_conv_output_hubert_encoder_loss",
             conv_output_hubert_encoder_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_conv_output_hubert_cluster_loss",
             conv_output_hubert_cluster_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_conv_output_hubert_prj_loss",
             conv_output_hubert_prj_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_hubert_output_reg_masked_loss",
             hubert_output_reg_masked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_hubert_output_reg_unmasked_loss",
             hubert_output_reg_unmasked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_hubert_output_reg_loss",
             hubert_output_reg_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_hubert_output_cls_masked_loss",
             hubert_output_cls_masked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_hubert_output_cls_unmasked_loss",
             hubert_output_cls_unmasked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_hubert_output_cls_loss",
             hubert_output_cls_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_total_loss",
             total_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
 
         self.train_step_conv_output_mel_loss_list.append(conv_output_mel_loss.item())
@@ -411,67 +404,67 @@ class LitBaseHuBERTModel(L.LightningModule):
             "val_conv_output_mel_loss",
             conv_output_mel_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_conv_output_hubert_encoder_loss",
             conv_output_hubert_encoder_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_conv_output_hubert_cluster_loss",
             conv_output_hubert_cluster_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_conv_output_hubert_prj_loss",
             conv_output_hubert_prj_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_hubert_output_reg_masked_loss",
             hubert_output_reg_masked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_hubert_output_reg_unmasked_loss",
             hubert_output_reg_unmasked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_hubert_output_reg_loss",
             hubert_output_reg_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_hubert_output_cls_masked_loss",
             hubert_output_cls_masked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_hubert_output_cls_unmasked_loss",
             hubert_output_cls_unmasked_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_hubert_output_cls_loss",
             hubert_output_cls_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_total_loss",
             total_loss,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
 
         self.val_step_conv_output_mel_loss_list.append(conv_output_mel_loss.item())
@@ -715,13 +708,13 @@ class LitBaseHuBERTModel(L.LightningModule):
             padding_mask_feature_hubert=padding_mask_feature_hubert,
         )
 
-        if self.cfg["model"]["decoder"]["vocoder_input_cluster"] == "conv":
+        if self.cfg.model.decoder.vocoder_input_cluster == "conv":
             inputs_dict = self.hifigan.prepare_inputs_dict(
                 feature=conv_output_mel,
                 feature_hubert_encoder=conv_output_hubert_encoder,
                 feature_hubert_cluster=conv_output_hubert_cluster.argmax(dim=1),
             )
-        elif self.cfg["model"]["decoder"]["vocoder_input_cluster"] == "hubert":
+        elif self.cfg.model.decoder.vocoder_input_cluster == "hubert":
             inputs_dict = self.hifigan.prepare_inputs_dict(
                 feature=conv_output_mel,
                 feature_hubert_encoder=hubert_output_reg,
@@ -792,7 +785,7 @@ class LitBaseHuBERTModel(L.LightningModule):
                 speaker[0],
                 filename[0],
                 "gt",
-                wandb.Audio(wav_gt.cpu(), sample_rate=self.cfg["data"]["audio"]["sr"]),
+                wandb.Audio(wav_gt.cpu(), sample_rate=self.cfg.data.audio.sr),
                 None,
                 None,
                 None,
@@ -802,7 +795,7 @@ class LitBaseHuBERTModel(L.LightningModule):
                 speaker[0],
                 filename[0],
                 "abs",
-                wandb.Audio(wav_abs.cpu(), sample_rate=self.cfg["data"]["audio"]["sr"]),
+                wandb.Audio(wav_abs.cpu(), sample_rate=self.cfg.data.audio.sr),
                 pesq_abs,
                 stoi_abs,
                 estoi_abs,
@@ -812,9 +805,7 @@ class LitBaseHuBERTModel(L.LightningModule):
                 speaker[0],
                 filename[0],
                 "pred",
-                wandb.Audio(
-                    wav_pred.cpu(), sample_rate=self.cfg["data"]["audio"]["sr"]
-                ),
+                wandb.Audio(wav_pred.cpu(), sample_rate=self.cfg.data.audio.sr),
                 pesq_pred,
                 stoi_pred,
                 estoi_pred,
@@ -827,7 +818,7 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.model.eval()
 
         self.hifigan = LitHiFiGANModel.load_from_checkpoint(
-            self.cfg["model"]["hifigan"]["model_path"],
+            self.cfg.model.hifigan.model_path,
             cfg=self.cfg,
         )
         self.hifigan.eval()
@@ -850,13 +841,13 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.df_utt = self.df_utt.loc[self.df_utt["subset"] == "j"]
 
         self.wb_pesq_evaluator = PerceptualEvaluationSpeechQuality(
-            self.cfg["data"]["audio"]["sr"], "wb"
+            self.cfg.data.audio.sr, "wb"
         )
         self.stoi_evaluator = ShortTimeObjectiveIntelligibility(
-            self.cfg["data"]["audio"]["sr"], extended=False
+            self.cfg.data.audio.sr, extended=False
         )
         self.estoi_evaluator = ShortTimeObjectiveIntelligibility(
-            self.cfg["data"]["audio"]["sr"], extended=True
+            self.cfg.data.audio.sr, extended=True
         )
         self.speech_recognizer = whisper.load_model("large")
         self.mecab = MeCab.Tagger("-Owakati")
@@ -947,20 +938,20 @@ class LitBaseHuBERTModel(L.LightningModule):
             params=self.model.parameters(),
             lr=self.learning_rate,
             betas=(
-                self.cfg["training"]["optimizer"]["beta_1"],
-                self.cfg["training"]["optimizer"]["beta_2"],
+                self.cfg.training.optimizer.beta_1,
+                self.cfg.training.optimizer.beta_2,
             ),
-            weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
+            weight_decay=self.cfg.training.optimizer.weight_decay,
         )
         scheduler = CosineAnnealingWarmupRestarts(
             optimizer=optimizer,
-            first_cycle_steps=self.cfg["training"]["max_epoch"],
-            cycle_mult=self.cfg["training"]["scheduler"]["cycle_mult"],
-            max_lr=self.cfg["training"]["optimizer"]["learning_rate"],
-            min_lr=self.cfg["training"]["scheduler"]["min_lr"],
-            warmup_steps=self.cfg["training"]["max_epoch"]
-            * self.cfg["training"]["scheduler"]["warmup_steps"],
-            gamma=self.cfg["training"]["scheduler"]["gamma"],
+            first_cycle_steps=self.cfg.training.max_epoch,
+            cycle_mult=self.cfg.training.scheduler.cycle_mult,
+            max_lr=self.cfg.training.optimizer.learning_rate,
+            min_lr=self.cfg.training.scheduler.min_lr,
+            warmup_steps=self.cfg.training.max_epoch
+            * self.cfg.training.scheduler.warmup_steps,
+            gamma=self.cfg.training.scheduler.gamma,
         )
         return {
             "optimizer": optimizer,

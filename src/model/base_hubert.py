@@ -13,64 +13,64 @@ class BaseHuBERTModel(nn.Module):
         super().__init__()
         self.cfg = cfg
 
-        if cfg["model"]["ssl_type"] == "avhubert":
+        if cfg.model.ssl_type == "avhubert":
             self.avhubert = load_avhubert(cfg)
             hidden_channels = self.avhubert.encoder_embed_dim
-        elif cfg["model"]["ssl_type"] == "raven":
+        elif cfg.model.ssl_type == "raven":
             self.raven = load_raven(cfg)
             hidden_channels = self.raven.attention_dim
-        elif cfg["model"]["ssl_type"] == "vatlm":
+        elif cfg.model.ssl_type == "vatlm":
             self.vatlm = load_vatlm(cfg)
             hidden_channels = self.vatlm.encoder_embed_dim
-        elif cfg["model"]["ssl_type"] == "ensemble":
+        elif cfg.model.ssl_type == "ensemble":
             self.avhubert = load_avhubert(cfg)
             self.raven = load_raven(cfg)
             self.vatlm = load_vatlm(cfg)
             hidden_channels = self.avhubert.encoder_embed_dim
-            self.dropout = nn.Dropout(cfg["model"]["ssl_feature_dropout"])
+            self.dropout = nn.Dropout(cfg.model.ssl_feature_dropout)
             self.fuse_layer = nn.Linear(
                 self.avhubert.encoder_embed_dim
                 + self.raven.attention_dim
                 + self.vatlm.encoder_embed_dim,
                 hidden_channels,
             )
-        elif cfg["model"]["ssl_type"] == "ensemble_avhubert_vatlm":
+        elif cfg.model.ssl_type == "ensemble_avhubert_vatlm":
             self.avhubert = load_avhubert(cfg)
             self.vatlm = load_vatlm(cfg)
             hidden_channels = self.avhubert.encoder_embed_dim
-            self.dropout = nn.Dropout(cfg["model"]["ssl_feature_dropout"])
+            self.dropout = nn.Dropout(cfg.model.ssl_feature_dropout)
             self.fuse_layer = nn.Linear(
                 self.avhubert.encoder_embed_dim + self.vatlm.encoder_embed_dim,
                 hidden_channels,
             )
-        elif cfg["model"]["ssl_type"] == "ensemble_avhubert_raven":
+        elif cfg.model.ssl_type == "ensemble_avhubert_raven":
             self.avhubert = load_avhubert(cfg)
             self.raven = load_raven(cfg)
             hidden_channels = self.avhubert.encoder_embed_dim
-            self.dropout = nn.Dropout(cfg["model"]["ssl_feature_dropout"])
+            self.dropout = nn.Dropout(cfg.model.ssl_feature_dropout)
             self.fuse_layer = nn.Linear(
                 self.avhubert.encoder_embed_dim + self.raven.attention_dim,
                 hidden_channels,
             )
-        elif cfg["model"]["ssl_type"] == "ensemble_raven_vatlm":
+        elif cfg.model.ssl_type == "ensemble_raven_vatlm":
             self.raven = load_raven(cfg)
             self.vatlm = load_vatlm(cfg)
             hidden_channels = self.vatlm.encoder_embed_dim
-            self.dropout = nn.Dropout(cfg["model"]["ssl_feature_dropout"])
+            self.dropout = nn.Dropout(cfg.model.ssl_feature_dropout)
             self.fuse_layer = nn.Linear(
                 self.raven.attention_dim + self.vatlm.encoder_embed_dim,
                 hidden_channels,
             )
 
-        if cfg["model"]["spk_emb_layer"]["use"]:
+        if cfg.model.spk_emb_layer.use:
             self.spk_emb_layer = nn.Linear(
-                hidden_channels + cfg["model"]["spk_emb_layer"]["dim"],
+                hidden_channels + cfg.model.spk_emb_layer.dim,
                 hidden_channels,
             )
 
         self.conv_decoder = ConvDecoderHuBERT(cfg, hidden_channels)
         self.hubert_decoder = HuBERTDecoder(
-            cfg, cfg["model"]["decoder"]["hubert"]["encoder_output_dim"]
+            cfg, cfg.model.decoder.hubert.encoder_output_dim
         )
 
     def extract_feature_avhubert(
@@ -350,13 +350,13 @@ class BaseHuBERTModel(nn.Module):
         """
         lip = lip.permute(0, 1, 4, 2, 3)  # (B, C, T, H, W)
 
-        if self.cfg["model"]["ssl_type"] == "avhubert":
+        if self.cfg.model.ssl_type == "avhubert":
             feature = self.extract_feature_avhubert(lip, padding_mask_lip, audio)
-        elif self.cfg["model"]["ssl_type"] == "raven":
+        elif self.cfg.model.ssl_type == "raven":
             feature = self.extract_feature_raven(lip, padding_mask_lip, audio)
-        elif self.cfg["model"]["ssl_type"] == "vatlm":
+        elif self.cfg.model.ssl_type == "vatlm":
             feature = self.extract_feature_vatlm(lip, padding_mask_lip, audio)
-        elif self.cfg["model"]["ssl_type"] == "ensemble":
+        elif self.cfg.model.ssl_type == "ensemble":
             with torch.no_grad():
                 feature_avhubert = self.extract_feature_avhubert(
                     lip, padding_mask_lip, audio
@@ -370,7 +370,7 @@ class BaseHuBERTModel(nn.Module):
                 [feature_avhubert, feature_raven, feature_vatlm], dim=-1
             )
             feature = self.fuse_layer(feature)
-        elif self.cfg["model"]["ssl_type"] == "ensemble_avhubert_vatlm":
+        elif self.cfg.model.ssl_type == "ensemble_avhubert_vatlm":
             with torch.no_grad():
                 feature_avhubert = self.extract_feature_avhubert(
                     lip, padding_mask_lip, audio
@@ -380,7 +380,7 @@ class BaseHuBERTModel(nn.Module):
             feature_vatlm = self.dropout(feature_vatlm)
             feature = torch.concat([feature_avhubert, feature_vatlm], dim=-1)
             feature = self.fuse_layer(feature)
-        elif self.cfg["model"]["ssl_type"] == "ensemble_avhubert_raven":
+        elif self.cfg.model.ssl_type == "ensemble_avhubert_raven":
             with torch.no_grad():
                 feature_avhubert = self.extract_feature_avhubert(
                     lip, padding_mask_lip, audio
@@ -390,7 +390,7 @@ class BaseHuBERTModel(nn.Module):
             feature_raven = self.dropout(feature_raven)
             feature = torch.concat([feature_avhubert, feature_raven], dim=-1)
             feature = self.fuse_layer(feature)
-        elif self.cfg["model"]["ssl_type"] == "ensemble_raven_vatlm":
+        elif self.cfg.model.ssl_type == "ensemble_raven_vatlm":
             with torch.no_grad():
                 feature_raven = self.extract_feature_raven(lip, padding_mask_lip, audio)
                 feature_vatlm = self.extract_feature_vatlm(lip, padding_mask_lip, audio)
@@ -399,7 +399,7 @@ class BaseHuBERTModel(nn.Module):
             feature = torch.concat([feature_raven, feature_vatlm], dim=-1)
             feature = self.fuse_layer(feature)
 
-        if self.cfg["model"]["spk_emb_layer"]["use"]:
+        if self.cfg.model.spk_emb_layer.use:
             spk_emb = spk_emb.unsqueeze(1).expand(-1, feature.shape[1], -1)  # (B, T, C)
             feature = torch.cat([feature, spk_emb], dim=-1)
             feature = self.spk_emb_layer(feature)
@@ -418,17 +418,13 @@ class BaseHuBERTModel(nn.Module):
         ).to(dtype=torch.bool, device=lip.device)
 
         # encoder_input_maskを用いる場合、原音声と合成音声を混ぜる
-        if self.cfg["model"]["decoder"]["hubert"]["encoder_input_mask"]["use"]:
+        if self.cfg.model.decoder.hubert.encoder_input_mask.use:
             mask_indices = torch.from_numpy(
                 self.compute_mask_indices(
                     shape=(feature_hubert_prj.shape[0], feature_hubert_prj.shape[2]),
                     padding_mask=padding_mask_feature_hubert,
-                    mask_prob=self.cfg["model"]["decoder"]["hubert"][
-                        "encoder_input_mask"
-                    ]["mask_prob"],
-                    mask_length=self.cfg["model"]["decoder"]["hubert"][
-                        "encoder_input_mask"
-                    ]["mask_length"],
+                    mask_prob=self.cfg.model.decoder.hubert.encoder_input_mask.mask_prob,
+                    mask_length=self.cfg.model.decoder.hubert.encoder_input_mask.mask_length,
                     mask_type="static",
                     min_masks=2,
                     no_overlap=False,

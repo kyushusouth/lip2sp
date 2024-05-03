@@ -31,14 +31,12 @@ def adjust_seq_lengths(batch: list, cfg: omegaconf.DictConfig) -> tuple:
     feature_hubert_prj_adjusted = []
     feature_hubert_cluster_adjusted = []
 
-    lip_input_len = int(
-        cfg["training"]["input_sec"] * cfg["data"]["video"]["fps"]
-    )
+    lip_input_len = int(cfg.training.input_sec * cfg.data.video.fps)
     upsample = get_upsample(cfg)
     feat_input_len = int(lip_input_len * upsample)
     upsample_hubert = get_upsample_hubert(cfg)
     feat_hubert_input_len = int(lip_input_len * upsample_hubert)
-    wav_input_len = int(feat_input_len * cfg["data"]["audio"]["hop_length"])
+    wav_input_len = int(feat_input_len * cfg.data.audio.hop_length)
 
     for (
         wav,
@@ -96,9 +94,7 @@ def adjust_seq_lengths(batch: list, cfg: omegaconf.DictConfig) -> tuple:
             lip_start_frame = random.randint(0, lip.shape[-1] - lip_input_len - 1)
             feature_start_frame = int(lip_start_frame * upsample)
             feature_hubert_start_frame = int(lip_start_frame * upsample_hubert)
-            wav_start_sample = int(
-                feature_start_frame * cfg["data"]["audio"]["hop_length"]
-            )
+            wav_start_sample = int(feature_start_frame * cfg.data.audio.hop_length)
             wav = wav[wav_start_sample : wav_start_sample + wav_input_len]
             lip = lip[..., lip_start_frame : lip_start_frame + lip_input_len]
             feature = feature[

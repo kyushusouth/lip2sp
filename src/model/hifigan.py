@@ -156,116 +156,102 @@ class Generator(torch.nn.Module):
         super(Generator, self).__init__()
         self.cfg = cfg
 
-        if cfg["model"]["hifigan"]["input"] == "feature":
+        if cfg.model.hifigan.input == "feature":
             self.emb_mel = nn.Linear(
-                int(cfg["data"]["audio"]["n_mels"] * 2),
-                cfg["model"]["hifigan"]["embedding_dim"],
+                int(cfg.data.audio.n_mels * 2),
+                cfg.model.hifigan.embedding_dim,
             )
-            model_in_dim = (
-                cfg["model"]["hifigan"]["embedding_dim"]
-                + cfg["model"]["spk_emb_layer"]["dim"]
-            )
-        elif cfg["model"]["hifigan"]["input"] == "feature_hubert_encoder":
+            model_in_dim = cfg.model.hifigan.embedding_dim + cfg.model.spk_emb_layer.dim
+        elif cfg.model.hifigan.input == "feature_hubert_encoder":
             self.emb_hubert_encoder = nn.Linear(
-                cfg["model"]["decoder"]["hubert"]["encoder_output_dim"],
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.encoder_output_dim,
+                cfg.model.hifigan.embedding_dim,
             )
-            model_in_dim = (
-                cfg["model"]["hifigan"]["embedding_dim"]
-                + cfg["model"]["spk_emb_layer"]["dim"]
-            )
-        elif cfg["model"]["hifigan"]["input"] == "feature_hubert_cluster":
+            model_in_dim = cfg.model.hifigan.embedding_dim + cfg.model.spk_emb_layer.dim
+        elif cfg.model.hifigan.input == "feature_hubert_cluster":
             self.emb_hubert_cluster = nn.Embedding(
-                cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1,
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.n_clusters + 1,
+                cfg.model.hifigan.embedding_dim,
             )
-            model_in_dim = (
-                cfg["model"]["hifigan"]["embedding_dim"]
-                + cfg["model"]["spk_emb_layer"]["dim"]
-            )
-        elif cfg["model"]["hifigan"]["input"] == "cat_mel_hubert_encoder":
+            model_in_dim = cfg.model.hifigan.embedding_dim + cfg.model.spk_emb_layer.dim
+        elif cfg.model.hifigan.input == "cat_mel_hubert_encoder":
             self.emb_mel = nn.Linear(
-                int(cfg["data"]["audio"]["n_mels"] * 2),
-                cfg["model"]["hifigan"]["embedding_dim"],
+                int(cfg.data.audio.n_mels * 2),
+                cfg.model.hifigan.embedding_dim,
             )
             self.emb_hubert_encoder = nn.Linear(
-                cfg["model"]["decoder"]["hubert"]["encoder_output_dim"],
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.encoder_output_dim,
+                cfg.model.hifigan.embedding_dim,
             )
-            model_in_dim = (cfg["model"]["hifigan"]["embedding_dim"] * 2) + cfg[
+            model_in_dim = (cfg.model.hifigan.embedding_dim * 2) + cfg[
                 "model"
-            ]["spk_emb_layer"]["dim"]
-        elif cfg["model"]["hifigan"]["input"] == "cat_mel_hubert_cluster":
+            ].spk_emb_layer.dim
+        elif cfg.model.hifigan.input == "cat_mel_hubert_cluster":
             self.emb_mel = nn.Linear(
-                int(cfg["data"]["audio"]["n_mels"] * 2),
-                cfg["model"]["hifigan"]["embedding_dim"],
+                int(cfg.data.audio.n_mels * 2),
+                cfg.model.hifigan.embedding_dim,
             )
             self.emb_hubert_cluster = nn.Embedding(
-                cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1,
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.n_clusters + 1,
+                cfg.model.hifigan.embedding_dim,
             )
-            model_in_dim = (cfg["model"]["hifigan"]["embedding_dim"] * 2) + cfg[
+            model_in_dim = (cfg.model.hifigan.embedding_dim * 2) + cfg[
                 "model"
-            ]["spk_emb_layer"]["dim"]
-        elif cfg["model"]["hifigan"]["input"] == "cat_hubert_encoder_hubert_cluster":
+            ].spk_emb_layer.dim
+        elif cfg.model.hifigan.input == "cat_hubert_encoder_hubert_cluster":
             self.emb_hubert_encoder = nn.Linear(
-                cfg["model"]["decoder"]["hubert"]["encoder_output_dim"],
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.encoder_output_dim,
+                cfg.model.hifigan.embedding_dim,
             )
             self.emb_hubert_cluster = nn.Embedding(
-                cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1,
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.n_clusters + 1,
+                cfg.model.hifigan.embedding_dim,
             )
-            model_in_dim = (cfg["model"]["hifigan"]["embedding_dim"] * 2) + cfg[
+            model_in_dim = (cfg.model.hifigan.embedding_dim * 2) + cfg[
                 "model"
-            ]["spk_emb_layer"]["dim"]
-        elif (
-            cfg["model"]["hifigan"]["input"] == "cat_mel_hubert_encoder_hubert_cluster"
-        ):
+            ].spk_emb_layer.dim
+        elif cfg.model.hifigan.input == "cat_mel_hubert_encoder_hubert_cluster":
             self.emb_mel = nn.Linear(
-                int(cfg["data"]["audio"]["n_mels"] * 2),
-                cfg["model"]["hifigan"]["embedding_dim"],
+                int(cfg.data.audio.n_mels * 2),
+                cfg.model.hifigan.embedding_dim,
             )
             self.emb_hubert_encoder = nn.Linear(
-                cfg["model"]["decoder"]["hubert"]["encoder_output_dim"],
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.encoder_output_dim,
+                cfg.model.hifigan.embedding_dim,
             )
             self.emb_hubert_cluster = nn.Embedding(
-                cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1,
-                cfg["model"]["hifigan"]["embedding_dim"],
+                cfg.model.decoder.hubert.n_clusters + 1,
+                cfg.model.hifigan.embedding_dim,
             )
-            model_in_dim = (cfg["model"]["hifigan"]["embedding_dim"] * 3) + cfg[
+            model_in_dim = (cfg.model.hifigan.embedding_dim * 3) + cfg[
                 "model"
-            ]["spk_emb_layer"]["dim"]
+            ].spk_emb_layer.dim
 
-        self.num_kernels = len(cfg["model"]["hifigan"]["resblock_kernel_sizes"])
-        self.num_upsamples = len(cfg["model"]["hifigan"]["upsample_rates"])
+        self.num_kernels = len(cfg.model.hifigan.resblock_kernel_sizes)
+        self.num_upsamples = len(cfg.model.hifigan.upsample_rates)
         self.conv_pre = weight_norm(
             Conv1d(
                 model_in_dim,
-                cfg["model"]["hifigan"]["upsample_initial_channel"],
+                cfg.model.hifigan.upsample_initial_channel,
                 7,
                 1,
                 padding=3,
             )
         )
-        resblock = (
-            ResBlock1 if cfg["model"]["hifigan"]["resblock"] == "1" else ResBlock2
-        )
+        resblock = ResBlock1 if cfg.model.hifigan.resblock == "1" else ResBlock2
 
         self.ups = nn.ModuleList()
         for i, (u, k) in enumerate(
             zip(
-                cfg["model"]["hifigan"]["upsample_rates"],
-                cfg["model"]["hifigan"]["upsample_kernel_sizes"],
+                cfg.model.hifigan.upsample_rates,
+                cfg.model.hifigan.upsample_kernel_sizes,
             )
         ):
             self.ups.append(
                 weight_norm(
                     ConvTranspose1d(
-                        cfg["model"]["hifigan"]["upsample_initial_channel"] // (2**i),
-                        cfg["model"]["hifigan"]["upsample_initial_channel"]
-                        // (2 ** (i + 1)),
+                        cfg.model.hifigan.upsample_initial_channel // (2**i),
+                        cfg.model.hifigan.upsample_initial_channel // (2 ** (i + 1)),
                         k,
                         u,
                         padding=(k - u) // 2,
@@ -275,11 +261,11 @@ class Generator(torch.nn.Module):
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
-            ch = cfg["model"]["hifigan"]["upsample_initial_channel"] // (2 ** (i + 1))
+            ch = cfg.model.hifigan.upsample_initial_channel // (2 ** (i + 1))
             for j, (k, d) in enumerate(
                 zip(
-                    cfg["model"]["hifigan"]["resblock_kernel_sizes"],
-                    cfg["model"]["hifigan"]["resblock_dilation_sizes"],
+                    cfg.model.hifigan.resblock_kernel_sizes,
+                    cfg.model.hifigan.resblock_dilation_sizes,
                 )
             ):
                 self.resblocks.append(resblock(cfg, ch, k, d))
@@ -295,34 +281,32 @@ class Generator(torch.nn.Module):
         x: (B, T, C) or (B, T)
         spk_emb: (B, C)
         """
-        if self.cfg["model"]["hifigan"]["input"] == "feature":
+        if self.cfg.model.hifigan.input == "feature":
             x_mel = self.emb_mel(inputs_dict["feature"]).permute(0, 2, 1)
             x = x_mel
-        elif self.cfg["model"]["hifigan"]["input"] == "feature_hubert_encoder":
+        elif self.cfg.model.hifigan.input == "feature_hubert_encoder":
             x_hubert_encoder = self.emb_hubert_encoder(
                 inputs_dict["feature_hubert_encoder"]
             ).permute(0, 2, 1)
             x = x_hubert_encoder
-        elif self.cfg["model"]["hifigan"]["input"] == "feature_hubert_cluster":
+        elif self.cfg.model.hifigan.input == "feature_hubert_cluster":
             x_hubert_cluster = self.emb_hubert_cluster(
                 inputs_dict["feature_hubert_cluster"]
             ).permute(0, 2, 1)
             x = x_hubert_cluster
-        elif self.cfg["model"]["hifigan"]["input"] == "cat_mel_hubert_encoder":
+        elif self.cfg.model.hifigan.input == "cat_mel_hubert_encoder":
             x_mel = self.emb_mel(inputs_dict["feature"]).permute(0, 2, 1)
             x_hubert_encoder = self.emb_hubert_encoder(
                 inputs_dict["feature_hubert_encoder"]
             ).permute(0, 2, 1)
             x = torch.cat([x_mel, x_hubert_encoder], dim=1)
-        elif self.cfg["model"]["hifigan"]["input"] == "cat_mel_hubert_cluster":
+        elif self.cfg.model.hifigan.input == "cat_mel_hubert_cluster":
             x_mel = self.emb_mel(inputs_dict["feature"]).permute(0, 2, 1)
             x_hubert_cluster = self.emb_hubert_cluster(
                 inputs_dict["feature_hubert_cluster"]
             ).permute(0, 2, 1)
             x = torch.cat([x_mel, x_hubert_cluster], dim=1)
-        elif (
-            self.cfg["model"]["hifigan"]["input"] == "cat_hubert_encoder_hubert_cluster"
-        ):
+        elif self.cfg.model.hifigan.input == "cat_hubert_encoder_hubert_cluster":
             x_hubert_encoder = self.emb_hubert_encoder(
                 inputs_dict["feature_hubert_encoder"]
             ).permute(0, 2, 1)
@@ -330,10 +314,7 @@ class Generator(torch.nn.Module):
                 inputs_dict["feature_hubert_cluster"]
             ).permute(0, 2, 1)
             x = torch.cat([x_hubert_encoder, x_hubert_cluster], dim=1)
-        elif (
-            self.cfg["model"]["hifigan"]["input"]
-            == "cat_mel_hubert_encoder_hubert_cluster"
-        ):
+        elif self.cfg.model.hifigan.input == "cat_mel_hubert_encoder_hubert_cluster":
             x_mel = self.emb_mel(inputs_dict["feature"]).permute(0, 2, 1)
             x_hubert_encoder = self.emb_hubert_encoder(
                 inputs_dict["feature_hubert_encoder"]

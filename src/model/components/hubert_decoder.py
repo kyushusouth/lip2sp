@@ -8,10 +8,10 @@ class HuBERTDecoder(nn.Module):
     def __init__(self, cfg: omegaconf.DictConfig, hidden_channels: int) -> None:
         super().__init__()
         self.hubert = AutoModel.from_pretrained(
-            cfg["model"]["decoder"]["hubert"]["model_name"]
+            cfg.model.decoder.hubert.model_name
         ).encoder
         self.out_layer_cls = nn.Linear(
-            hidden_channels, cfg["model"]["decoder"]["hubert"]["n_clusters"] + 1
+            hidden_channels, cfg.model.decoder.hubert.n_clusters + 1
         )
         self.out_layer_reg = nn.Linear(hidden_channels, hidden_channels)
 

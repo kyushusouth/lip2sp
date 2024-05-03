@@ -20,10 +20,10 @@ def save_mel(
         data=gt,
         x_axis="time",
         y_axis="mel",
-        sr=cfg["data"]["audio"]["sr"],
-        hop_length=cfg["data"]["audio"]["hop_length"],
-        fmin=cfg["data"]["audio"]["f_min"],
-        fmax=cfg["data"]["audio"]["f_max"],
+        sr=cfg.data.audio.sr,
+        hop_length=cfg.data.audio.hop_length,
+        fmin=cfg.data.audio.f_min,
+        fmax=cfg.data.audio.f_max,
         cmap="viridis",
     )
     plt.colorbar(format="%+2.f dB")
@@ -36,10 +36,10 @@ def save_mel(
         data=pred,
         x_axis="time",
         y_axis="mel",
-        sr=cfg["data"]["audio"]["sr"],
-        hop_length=cfg["data"]["audio"]["hop_length"],
-        fmin=cfg["data"]["audio"]["f_min"],
-        fmax=cfg["data"]["audio"]["f_max"],
+        sr=cfg.data.audio.sr,
+        hop_length=cfg.data.audio.hop_length,
+        fmin=cfg.data.audio.f_min,
+        fmax=cfg.data.audio.f_max,
         cmap="viridis",
     )
     plt.colorbar(format="%+2.f dB")
@@ -65,12 +65,8 @@ def save_wav(
     """
     gt /= np.max(np.abs(gt))
     pred /= np.max(np.abs(pred))
-    wandb.log(
-        {f"{filename}_gt": wandb.Audio(gt, sample_rate=cfg["data"]["audio"]["sr"])}
-    )
-    wandb.log(
-        {f"{filename}_pred": wandb.Audio(pred, sample_rate=cfg["data"]["audio"]["sr"])}
-    )
+    wandb.log({f"{filename}_gt": wandb.Audio(gt, sample_rate=cfg.data.audio.sr)})
+    wandb.log({f"{filename}_pred": wandb.Audio(pred, sample_rate=cfg.data.audio.sr)})
 
 
 def save_wav_table(
@@ -91,13 +87,13 @@ def save_wav_table(
         data=[
             [
                 "train",
-                wandb.Audio(gt_train, sample_rate=cfg["data"]["audio"]["sr"]),
-                wandb.Audio(pred_train, sample_rate=cfg["data"]["audio"]["sr"]),
+                wandb.Audio(gt_train, sample_rate=cfg.data.audio.sr),
+                wandb.Audio(pred_train, sample_rate=cfg.data.audio.sr),
             ],
             [
                 "val",
-                wandb.Audio(gt_val, sample_rate=cfg["data"]["audio"]["sr"]),
-                wandb.Audio(pred_val, sample_rate=cfg["data"]["audio"]["sr"]),
+                wandb.Audio(gt_val, sample_rate=cfg.data.audio.sr),
+                wandb.Audio(pred_val, sample_rate=cfg.data.audio.sr),
             ],
         ],
     )

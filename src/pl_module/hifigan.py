@@ -20,14 +20,14 @@ class LitHiFiGANModel(L.LightningModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.learning_rate = cfg["training"]["optimizer"]["learning_rate"]
+        self.learning_rate = cfg.training.optimizer.learning_rate
         self.automatic_optimization = False
 
         self.gen = Generator(cfg)
         self.mpd = MultiPeriodDiscriminator()
         self.msd = MultiScaleDiscriminator()
 
-        if cfg["model"]["hifigan"]["freeze"]:
+        if cfg.model.hifigan.freeze:
             for param in self.gen.parameters():
                 param.requires_grad = False
             for param in self.mpd.parameters():
@@ -95,17 +95,17 @@ class LitHiFiGANModel(L.LightningModule):
     def wav2mel(self, wav):
         if self.mel_basis is None and self.hann_window is None:
             mel_filterbank = librosa.filters.mel(
-                sr=self.cfg["data"]["audio"]["sr"],
-                n_fft=self.cfg["model"]["hifigan"]["loss"]["n_fft"],
-                n_mels=self.cfg["model"]["hifigan"]["loss"]["n_mels"],
-                fmin=self.cfg["data"]["audio"]["f_min"],
-                fmax=self.cfg["data"]["audio"]["f_max"],
+                sr=self.cfg.data.audio.sr,
+                n_fft=self.cfg.model.hifigan.loss.n_fft,
+                n_mels=self.cfg.model.hifigan.loss.n_mels,
+                fmin=self.cfg.data.audio.f_min,
+                fmax=self.cfg.data.audio.f_max,
             )
             self.mel_basis = torch.from_numpy(mel_filterbank).to(
                 dtype=torch.float32, device=self.device
             )
             self.hann_window = torch.hann_window(
-                self.cfg["model"]["hifigan"]["loss"]["win_length"]
+                self.cfg.model.hifigan.loss.win_length
             ).to(device=self.device)
 
         wav = torch.nn.functional.pad(
@@ -113,15 +113,15 @@ class LitHiFiGANModel(L.LightningModule):
             (
                 int(
                     (
-                        self.cfg["model"]["hifigan"]["loss"]["n_fft"]
-                        - self.cfg["model"]["hifigan"]["loss"]["hop_length"]
+                        self.cfg.model.hifigan.loss.n_fft
+                        - self.cfg.model.hifigan.loss.hop_length
                     )
                     / 2
                 ),
                 int(
                     (
-                        self.cfg["model"]["hifigan"]["loss"]["n_fft"]
-                        - self.cfg["model"]["hifigan"]["loss"]["hop_length"]
+                        self.cfg.model.hifigan.loss.n_fft
+                        - self.cfg.model.hifigan.loss.hop_length
                     )
                     / 2
                 ),
@@ -132,9 +132,9 @@ class LitHiFiGANModel(L.LightningModule):
 
         spec = torch.stft(
             wav,
-            self.cfg["model"]["hifigan"]["loss"]["n_fft"],
-            hop_length=self.cfg["model"]["hifigan"]["loss"]["hop_length"],
-            win_length=self.cfg["model"]["hifigan"]["loss"]["win_length"],
+            self.cfg.model.hifigan.loss.n_fft,
+            hop_length=self.cfg.model.hifigan.loss.hop_length,
+            win_length=self.cfg.model.hifigan.loss.win_length,
             window=self.hann_window,
             center=False,
             pad_mode="reflect",
@@ -275,55 +275,55 @@ class LitHiFiGANModel(L.LightningModule):
             "train_loss_disc_f",
             loss_disc_f,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_disc_s",
             loss_disc_s,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_disc_all",
             loss_disc_all,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_mel",
             loss_mel,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_fm_f",
             loss_fm_f,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_fm_s",
             loss_fm_s,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_gen_f",
             loss_gen_f,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_gen_s",
             loss_gen_s,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "train_loss_gen_all",
             loss_gen_all,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.train_step_loss_disc_f_list.append(loss_disc_f.item())
         self.train_step_loss_disc_s_list.append(loss_disc_s.item())
@@ -392,55 +392,55 @@ class LitHiFiGANModel(L.LightningModule):
             "val_loss_disc_f",
             loss_disc_f,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_disc_s",
             loss_disc_s,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_disc_all",
             loss_disc_all,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_mel",
             loss_mel,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_fm_f",
             loss_fm_f,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_fm_s",
             loss_fm_s,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_gen_f",
             loss_gen_f,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_gen_s",
             loss_gen_s,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.log(
             "val_loss_gen_all",
             loss_gen_all,
             logger=True,
-            batch_size=self.cfg["training"]["batch_size"],
+            batch_size=self.cfg.training.batch_size,
         )
         self.val_step_loss_disc_f_list.append(loss_disc_f.item())
         self.val_step_loss_disc_s_list.append(loss_disc_s.item())
@@ -615,27 +615,27 @@ class LitHiFiGANModel(L.LightningModule):
             params=self.gen.parameters(),
             lr=self.learning_rate,
             betas=(
-                self.cfg["training"]["optimizer"]["beta_1"],
-                self.cfg["training"]["optimizer"]["beta_2"],
+                self.cfg.training.optimizer.beta_1,
+                self.cfg.training.optimizer.beta_2,
             ),
-            weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
+            weight_decay=self.cfg.training.optimizer.weight_decay,
         )
         optimizer_d = torch.optim.AdamW(
             params=itertools.chain(self.msd.parameters(), self.mpd.parameters()),
             lr=self.learning_rate,
             betas=(
-                self.cfg["training"]["optimizer"]["beta_1"],
-                self.cfg["training"]["optimizer"]["beta_2"],
+                self.cfg.training.optimizer.beta_1,
+                self.cfg.training.optimizer.beta_2,
             ),
-            weight_decay=self.cfg["training"]["optimizer"]["weight_decay"],
+            weight_decay=self.cfg.training.optimizer.weight_decay,
         )
         scheduler_g = torch.optim.lr_scheduler.ExponentialLR(
             optimizer_g,
-            gamma=self.cfg["training"]["scheduler"]["gamma"],
+            gamma=self.cfg.training.scheduler.gamma,
         )
         scheduler_d = torch.optim.lr_scheduler.ExponentialLR(
             optimizer_d,
-            gamma=self.cfg["training"]["scheduler"]["gamma"],
+            gamma=self.cfg.training.scheduler.gamma,
         )
         return [
             {
