@@ -354,7 +354,7 @@ class LitBaseHuBERTModel(L.LightningModule):
 
         self.train_step_conv_output_mel_loss_list.append(conv_output_mel_loss.item())
         self.train_step_conv_output_hubert_encoder_loss_list.append(
-            conv_output_hubert_cluster_loss.item()
+            conv_output_hubert_encoder_loss.item()
         )
         self.train_step_conv_output_hubert_cluster_loss_list.append(
             conv_output_hubert_cluster_loss.item()

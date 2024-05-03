@@ -53,6 +53,7 @@ def run_conv_decoder(
     group_name: str,
     conv_output_hubert_encoder_loss: float,
     conv_output_hubert_cluster_loss: float,
+    learning_rate: float,
     debug: bool,
 ):
     if not hifigan_model_path.exists():
@@ -80,7 +81,7 @@ def run_conv_decoder(
             "model.decoder.hubert.freeze=true",
             "model.decoder.hubert.encoder_input_mask.use=false",
             "model.decoder.vocoder_input_cluster=conv",
-            "training.optimizer.learning_rate=1.0e-3",
+            f"training.optimizer.learning_rate={learning_rate}",
             "training=base_hubert_debug" if debug else "training=base_hubert",
             f"training.wandb.group_name={group_name}",
             "training.loss_weights.conv_output_mel_loss=1.0",
@@ -128,6 +129,7 @@ def main():
             group_name="conv_decoder",
             conv_output_hubert_encoder_loss=loss_weight,
             conv_output_hubert_cluster_loss=0.0,
+            learning_rate=1.0e-4,
             debug=debug,
         )
     for loss_weight in loss_weight_list:
@@ -140,6 +142,7 @@ def main():
             group_name="conv_decoder",
             conv_output_hubert_encoder_loss=0.0,
             conv_output_hubert_cluster_loss=loss_weight,
+            learning_rate=1.0e-4,
             debug=debug,
         )
     for loss_weight in loss_weight_list:
@@ -154,6 +157,7 @@ def main():
             group_name="conv_decoder",
             conv_output_hubert_encoder_loss=loss_weight,
             conv_output_hubert_cluster_loss=loss_weight,
+            learning_rate=1.0e-4,
             debug=debug,
         )
 
