@@ -107,6 +107,20 @@ def run(
 
 def main():
     debug = False
+    hifigan_model_path = {
+        "feature": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
+        ),
+        "cat_mel_hubert_encoder": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240426_035112/epoch:19-step:26000.ckpt"
+        ),
+        "cat_mel_hubert_cluster": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240427_004201/epoch:28-step:37700.ckpt"
+        ),
+        "cat_mel_hubert_encoder_hubert_cluster": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240429_040204/epoch:19-step:26000.ckpt"
+        ),
+    }
     hifigan_script_path = Path("/home/minami/lip2sp/src/main/hifigan.py")
     hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/hifigan")
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")

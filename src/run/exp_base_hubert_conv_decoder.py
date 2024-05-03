@@ -102,6 +102,9 @@ def run_conv_decoder(
 def main():
     debug = False
     hifigan_model_path = {
+        "feature": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
+        ),
         "cat_mel_hubert_encoder": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240426_035112/epoch:19-step:26000.ckpt"
         ),
@@ -118,6 +121,19 @@ def main():
     if debug:
         hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/debug_hifigan")
     loss_weight_list = [0.1, 0.5, 1.0]
+
+    run_conv_decoder(
+        hifigan_script_path=hifigan_script_path,
+        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+        hifigan_model_path=hifigan_model_path["feature"],
+        base_hubert_script_path=base_hubert_script_path,
+        hifigan_input="feature",
+        group_name="conv_decoder",
+        conv_output_hubert_encoder_loss=0.0,
+        conv_output_hubert_cluster_loss=0.0,
+        learning_rate=1.0e-3,
+        debug=debug,
+    )
     for loss_weight in loss_weight_list:
         run_conv_decoder(
             hifigan_script_path=hifigan_script_path,
