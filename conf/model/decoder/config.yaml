@@ -15,5 +15,9 @@ hubert:
     use: false
     mask_prob: 0.8
     mask_length: 10
+    dynamic:
+      use: true
+      mask_prob_init: 0.1
+      mask_prob_power: 0.9 
 
 vocoder_input_cluster: conv
