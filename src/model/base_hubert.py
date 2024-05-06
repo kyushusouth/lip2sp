@@ -338,6 +338,7 @@ class BaseHuBERTModel(nn.Module):
         feature_hubert_prj: torch.Tensor | None,
         padding_mask_lip: torch.Tensor | None,
         padding_mask_feature_hubert: torch.Tensor | None,
+        mask_prob: float | None,
     ) -> tuple:
         """
         args:
@@ -418,28 +419,34 @@ class BaseHuBERTModel(nn.Module):
         ).to(dtype=torch.bool, device=lip.device)
 
         # encoder_input_maskを用いる場合、原音声と合成音声を混ぜる
-        if self.cfg.model.decoder.hubert.encoder_input_mask.use:
-            mask_indices = torch.from_numpy(
-                self.compute_mask_indices(
-                    shape=(feature_hubert_prj.shape[0], feature_hubert_prj.shape[2]),
-                    padding_mask=padding_mask_feature_hubert,
-                    mask_prob=self.cfg.model.decoder.hubert.encoder_input_mask.mask_prob,
-                    mask_length=self.cfg.model.decoder.hubert.encoder_input_mask.mask_length,
-                    mask_type="static",
-                    min_masks=2,
-                    no_overlap=False,
-                    min_space=1,
+        if self.training:
+            if self.cfg.model.decoder.hubert.encoder_input_mask.use:
+                mask_indices = torch.from_numpy(
+                    self.compute_mask_indices(
+                        shape=(
+                            feature_hubert_prj.shape[0],
+                            feature_hubert_prj.shape[2],
+                        ),
+                        padding_mask=padding_mask_feature_hubert,
+                        mask_prob=self.cfg.model.decoder.hubert.encoder_input_mask.mask_prob
+                        if not self.cfg.model.decoder.hubert.encoder_input_mask.dynamic.use
+                        else mask_prob,
+                        mask_length=self.cfg.model.decoder.hubert.encoder_input_mask.mask_length,
+                        mask_type="static",
+                        min_masks=2,
+                        no_overlap=False,
+                        min_space=1,
+                    )
+                ).to(dtype=torch.bool, device=feature_hubert_prj.device)  # (B, T)
+                mask_indices_prj = mask_indices.unsqueeze(1).expand(
+                    -1, feature_hubert_prj.shape[1], -1
                 )
-            ).to(dtype=torch.bool, device=feature_hubert_prj.device)  # (B, T)
-            mask_indices_prj = mask_indices.unsqueeze(1).expand(
-                -1, feature_hubert_prj.shape[1], -1
-            )
-            hubert_decoder_input = feature_hubert_prj.to(
-                dtype=conv_output_hubert_prj.dtype
-            )
-            hubert_decoder_input[mask_indices_prj] = conv_output_hubert_prj[
-                mask_indices_prj
-            ]
+                hubert_decoder_input = feature_hubert_prj.to(
+                    dtype=conv_output_hubert_prj.dtype
+                )
+                hubert_decoder_input[mask_indices_prj] = conv_output_hubert_prj[
+                    mask_indices_prj
+                ]
 
         hubert_output_reg, hubert_output_cls = self.hubert_decoder(
             hubert_decoder_input.permute(0, 2, 1)

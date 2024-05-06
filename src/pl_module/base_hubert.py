@@ -96,6 +96,18 @@ class LitBaseHuBERTModel(L.LightningModule):
         self.train_mel_example = {"gt": None, "pred": None}
         self.val_mel_example = {"gt": None, "pred": None}
 
+        if cfg.model.decoder.hubert.encoder_input_mask.dynamic.use:
+            mask_prob = (
+                cfg.model.decoder.hubert.encoder_input_mask.dynamic.mask_prob_init
+            )
+            self.mask_prob_list = []
+            for epoch in range(cfg.training.max_epoch):
+                self.mask_prob_list.append(mask_prob)
+                mask_prob = (
+                    mask_prob
+                    ** cfg.model.decoder.hubert.encoder_input_mask.dynamic.mask_prob_power
+                )
+
     def convert_loss_nan_to_zero(self, loss):
         if torch.isnan(loss):
             loss = torch.tensor(0.0).to(dtype=torch.float32, device=self.device)
@@ -149,6 +161,9 @@ class LitBaseHuBERTModel(L.LightningModule):
             feature_hubert_prj=feature_hubert_prj,
             padding_mask_lip=padding_mask_lip,
             padding_mask_feature_hubert=padding_mask_feature_hubert,
+            mask_prob=None
+            if not self.cfg.model.decoder.hubert.encoder_input_mask.dynamic.use
+            else self.mask_prob_list[self.current_epoch],
         )
 
         conv_output_mel_loss = self.loss_fn.l1_loss(
@@ -658,6 +673,14 @@ class LitBaseHuBERTModel(L.LightningModule):
             filename="val",
         )
 
+        self.log(
+            "current_mask_prob",
+            self.cfg.model.decoder.hubert.encoder_input_mask.mask_prob
+            if not self.cfg.model.decoder.hubert.encoder_input_mask.dynamic.use
+            else self.mask_prob_list[self.current_epoch],
+            logger=True,
+        )
+
     def test_step(self, batch: list, batch_index: int) -> None:
         (
             wav_gt,
@@ -706,6 +729,9 @@ class LitBaseHuBERTModel(L.LightningModule):
             feature_hubert_prj=feature_hubert_prj,
             padding_mask_lip=padding_mask_lip,
             padding_mask_feature_hubert=padding_mask_feature_hubert,
+            mask_prob=None
+            if not self.cfg.model.decoder.hubert.encoder_input_mask.dynamic.use
+            else self.mask_prob_list[self.current_epoch],
         )
 
         if self.cfg.model.decoder.vocoder_input_cluster == "conv":
