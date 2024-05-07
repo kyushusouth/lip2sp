@@ -94,6 +94,7 @@ def run_conv_decoder(
             "training.loss_weights.hubert_output_cls_masked_loss=0.0",
             "training.loss_weights.hubert_output_cls_unmasked_loss=0.0",
             "training.loss_weights.hubert_output_cls_loss=0.0",
+            "training.loss_weights.hubert_output_mel_loss=0.0",
             "training.finetune=false",
         ]
     )
