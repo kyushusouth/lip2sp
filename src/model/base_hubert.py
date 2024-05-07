@@ -417,8 +417,8 @@ class BaseHuBERTModel(nn.Module):
             feature_hubert_prj.shape[0], feature_hubert_prj.shape[2]
         ).to(dtype=torch.bool, device=lip.device)
 
-        # encoder_input_maskを用いる場合、原音声と合成音声を混ぜる
-        if self.cfg.model.decoder.hubert.encoder_input_mask.use:
+        # encoder_input_maskを用いる場合、原音声と合成音声を混ぜる（学習時のみ）
+        if self.training and self.cfg.model.decoder.hubert.encoder_input_mask.use:
             mask_indices = torch.from_numpy(
                 self.compute_mask_indices(
                     shape=(feature_hubert_prj.shape[0], feature_hubert_prj.shape[2]),
@@ -441,7 +441,7 @@ class BaseHuBERTModel(nn.Module):
                 mask_indices_prj
             ]
 
-        hubert_output_reg, hubert_output_cls = self.hubert_decoder(
+        hubert_output_reg, hubert_output_cls, hubert_output_mel = self.hubert_decoder(
             hubert_decoder_input.permute(0, 2, 1)
         )
 
@@ -452,5 +452,6 @@ class BaseHuBERTModel(nn.Module):
             conv_output_hubert_cluster,
             hubert_output_reg,
             hubert_output_cls,
+            hubert_output_mel,
             mask_indices,
         )
