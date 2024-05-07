@@ -17,7 +17,7 @@ from src.pl_module.base_hubert import LitBaseHuBERTModel
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
-    seed_everything(seed=cfg.seed)
+    seed_everything(seed=cfg.training.seed)
 
     cfg.training.checkpoints_save_dir = str(
         Path(cfg.training.checkpoints_save_dir).expanduser() / on_start.CURRENT_TIME
