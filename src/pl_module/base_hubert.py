@@ -762,7 +762,7 @@ class LitBaseHuBERTModel(L.LightningModule):
             )
         elif self.cfg.model.decoder.vocoder_input_cluster == "hubert":
             inputs_dict = self.hifigan.prepare_inputs_dict(
-                feature=hubert_output_mel,
+                feature=conv_output_mel,
                 feature_hubert_encoder=hubert_output_reg,
                 feature_hubert_cluster=hubert_output_cls.argmax(dim=1),
             )
