@@ -43,6 +43,7 @@ def run_avhubert(
             "training.loss_weights.hubert_output_cls_masked_loss=0.0",
             "training.loss_weights.hubert_output_cls_unmasked_loss=0.0",
             "training.loss_weights.hubert_output_cls_loss=0.0",
+            "training.loss_weights.hubert_output_mel_loss=0.0",
             "training.finetune=false",
         ]
     )
@@ -97,6 +98,7 @@ def run_hubert(
             f"training.loss_weights.hubert_output_cls_masked_loss={hubert_output_cls_masked_loss}",
             f"training.loss_weights.hubert_output_cls_unmasked_loss={hubert_output_cls_unmasked_loss}",
             f"training.loss_weights.hubert_output_cls_loss={hubert_output_cls_loss}",
+            "training.loss_weights.hubert_output_mel_loss=1.0",
             "training.finetune=true",
             f"training.finetune_start_model_path={trained_avhubert_path}",
             f"training.seed={seed}",
@@ -105,7 +107,7 @@ def run_hubert(
 
 
 def main():
-    debug = True
+    debug = False
     hifigan_model_path = {
         "feature": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
