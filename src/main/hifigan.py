@@ -17,7 +17,7 @@ from src.pl_module.hifigan import LitHiFiGANModel
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
-    seed_everything(seed=cfg.seed)
+    seed_everything(seed=cfg.training.seed)
 
     cfg.training.checkpoints_save_dir = str(
         Path(cfg.training.checkpoints_save_dir).expanduser() / on_start.CURRENT_TIME
@@ -35,7 +35,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
 
     wandb_logger = WandbLogger(
         project=cfg.training.wandb.project_name,
-        log_model=True,
+        log_model=False,
         config=omegaconf.OmegaConf.to_container(
             cfg, resolve=True, throw_on_missing=True
         ),
