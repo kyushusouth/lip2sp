@@ -14,6 +14,12 @@ def main():
             "/home/minami/lip2sp/src/run/exp_base_hubert_hubert_decoder.py",
         ]
     )
+    subprocess.run(
+        [
+            "python",
+            "/home/minami/lip2sp/src/run/exp_hifigan.py",
+        ]
+    )
 
 
 if __name__ == "__main__":
