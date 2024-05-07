@@ -30,6 +30,7 @@ loss_weights:
   hubert_output_cls_masked_loss: 1.0
   hubert_output_cls_unmasked_loss: 0.0
   hubert_output_cls_loss: 1.0
+  hubert_output_mel_loss: 1.0
 optimizer:
   learning_rate: 1.0e-3
   beta_1: 0.9
