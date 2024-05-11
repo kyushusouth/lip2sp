@@ -6,13 +6,13 @@ import numpy as np
 import omegaconf
 import pandas as pd
 import torch
-import wandb
 import whisper
 from cosine_annealing_warmup import CosineAnnealingWarmupRestarts
 from jiwer import wer
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
 
+import wandb
 from src.data_process.utils import get_upsample, get_upsample_hubert
 from src.log_fn.save_loss import save_epoch_loss_plot
 from src.log_fn.save_sample import save_mel
@@ -859,6 +859,32 @@ class LitBaseHuBERTModel(L.LightningModule):
             ],
         ]
         self.test_data_list += data
+
+        # save_dir = (
+        #     Path(
+        #         str(Path(self.cfg.training.finetune_start_model_path).parent).replace(
+        #             "checkpoints", "results"
+        #         )
+        #     )
+        #     / speaker[0]
+        #     / filename[0]
+        # )
+        # save_dir.mkdir(parents=True, exist_ok=True)
+        # write(
+        #     filename=str(save_dir / "gt.wav"),
+        #     rate=self.cfg.data.audio.sr,
+        #     data=wav_gt.cpu().numpy(),
+        # )
+        # write(
+        #     filename=str(save_dir / "abs.wav"),
+        #     rate=self.cfg.data.audio.sr,
+        #     data=wav_abs.cpu().numpy(),
+        # )
+        # write(
+        #     filename=str(save_dir / "pred.wav"),
+        #     rate=self.cfg.data.audio.sr,
+        #     data=wav_pred.cpu().numpy(),
+        # )
 
     def on_test_start(self) -> None:
         self.model.eval()
