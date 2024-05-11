@@ -7,25 +7,27 @@ from src.run.utils import get_last_checkpoint_path
 def run_hifigan(
     hifigan_script_path: Path,
     hifigan_checkpoint_dir: Path,
+    hifigan_checkpoint_path: Path,
     hifigan_input: str,
     group_name: str,
     debug: bool,
 ):
-    subprocess.run(
-        [
-            "python",
-            str(hifigan_script_path),
-            "data_choice.kablab.use=false",
-            "data_choice.jvs.use=false",
-            "data_choice.hifi_captain.use=true",
-            "data_choice.jsut.use=false",
-            f"model.hifigan.input={hifigan_input}",
-            "model.hifigan.freeze=false",
-            "training=hifigan_debug" if debug else "training=hifigan",
-            f"training.wandb.group_name={group_name}",
-            "training.finetune=false",
-        ]
-    )
+    if not hifigan_checkpoint_path.exists():
+        subprocess.run(
+            [
+                "python",
+                str(hifigan_script_path),
+                "data_choice.kablab.use=false",
+                "data_choice.jvs.use=false",
+                "data_choice.hifi_captain.use=true",
+                "data_choice.jsut.use=false",
+                f"model.hifigan.input={hifigan_input}",
+                "model.hifigan.freeze=false",
+                "training=hifigan_debug" if debug else "training=hifigan",
+                f"training.wandb.group_name={group_name}",
+                "training.finetune=false",
+            ]
+        )
     subprocess.run(
         [
             "python",
@@ -39,7 +41,7 @@ def run_hifigan(
             "training=hifigan_debug" if debug else "training=hifigan",
             f"training.wandb.group_name={group_name}",
             "training.finetune=true",
-            f"training.finetune_start_model_path={str(get_last_checkpoint_path(hifigan_checkpoint_dir))}",
+            f"training.finetune_start_model_path={str(get_last_checkpoint_path(hifigan_checkpoint_dir)) if not hifigan_checkpoint_path.exists() else hifigan_checkpoint_path}",
         ]
     )
 
@@ -73,27 +75,30 @@ def main():
     if debug:
         hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/debug_hifigan")
 
+    # run_hifigan(
+    #     hifigan_script_path=hifigan_script_path,
+    #     hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+    #     hifigan_input="feature_hubert_encoder",
+    #     group_name="hifigan",
+    #     debug=debug,
+    # )
     run_hifigan(
         hifigan_script_path=hifigan_script_path,
         hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-        hifigan_input="feature_hubert_encoder",
-        group_name="hifigan",
-        debug=debug,
-    )
-    run_hifigan(
-        hifigan_script_path=hifigan_script_path,
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+        hifigan_checkpoint_path=Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240509_071744/epoch:14-step:70740.ckpt"
+        ),
         hifigan_input="feature_hubert_cluster",
         group_name="hifigan",
         debug=debug,
     )
-    run_hifigan(
-        hifigan_script_path=hifigan_script_path,
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-        hifigan_input="cat_hubert_encoder_hubert_cluster",
-        group_name="hifigan",
-        debug=debug,
-    )
+    # run_hifigan(
+    #     hifigan_script_path=hifigan_script_path,
+    #     hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+    #     hifigan_input="cat_hubert_encoder_hubert_cluster",
+    #     group_name="hifigan",
+    #     debug=debug,
+    # )
 
 
 if __name__ == "__main__":

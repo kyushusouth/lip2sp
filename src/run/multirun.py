@@ -5,19 +5,13 @@ def main():
     subprocess.run(
         [
             "python",
-            "/home/minami/lip2sp/src/run/exp_base_hubert_conv_decoder.py",
+            "/home/minami/lip2sp/src/run/exp_hifigan.py",
         ]
     )
     subprocess.run(
         [
             "python",
             "/home/minami/lip2sp/src/run/exp_base_hubert_hubert_decoder.py",
-        ]
-    )
-    subprocess.run(
-        [
-            "python",
-            "/home/minami/lip2sp/src/run/exp_hifigan.py",
         ]
     )
 
