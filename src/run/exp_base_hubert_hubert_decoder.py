@@ -143,7 +143,7 @@ def run_hubert(
 
 
 def main():
-    debug = True
+    debug = False
     hifigan_model_path = {
         "feature": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
@@ -164,7 +164,7 @@ def main():
         base_hubert_checkpoint_dir = Path(
             "/home/minami/lip2sp/checkpoints/debug_base_hubert"
         )
-    loss_weight_list = [0.001, 0.005, 0.0001, 0.0005]
+    loss_weight_list = [0.001, 0.005, 0.01, 0.05, 0.1]
 
     trained_avhubert_path = Path(
         "/home/minami/lip2sp/checkpoints/base_hubert/20240508_045059/epoch:44-step:2250.ckpt"
