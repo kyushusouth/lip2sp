@@ -863,7 +863,7 @@ class LitBaseHuBERTModel(L.LightningModule):
 
         save_dir = (
             Path(
-                str(Path(self.cfg.training.finetune_start_model_path).parent).replace(
+                str(Path(self.cfg.training.checkpoints_save_dir)).replace(
                     "checkpoints", "results"
                 )
             )

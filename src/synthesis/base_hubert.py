@@ -1,12 +1,14 @@
+from pathlib import Path
+
 import hydra
 import lightning as L
 import omegaconf
-import wandb
 from lightning.pytorch import seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
+import wandb
 from src.main import on_start  # noqa: F401
 from src.pl_datamodule.base_hubert import BaseHuBERTDataModule
 from src.pl_module.base_hubert import LitBaseHuBERTModel
@@ -15,6 +17,10 @@ from src.pl_module.base_hubert import LitBaseHuBERTModel
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
     seed_everything(seed=cfg.training.seed)
+
+    cfg.training.checkpoints_save_dir = str(
+        Path(cfg.training.checkpoints_save_dir).expanduser() / on_start.CURRENT_TIME
+    )
 
     datamodule = BaseHuBERTDataModule(cfg)
     model = LitBaseHuBERTModel(cfg=cfg)
