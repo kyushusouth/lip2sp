@@ -55,7 +55,9 @@ def main():
         "feature_hubert_encoder": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240509_021443/epoch:22-step:29900.ckpt"
         ),
-        "feature_hubert_cluster": Path(""),
+        "feature_hubert_cluster": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240511_154553/epoch:17-step:23400.ckpt"
+        ),
         "cat_mel_hubert_encoder": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240426_035112/epoch:19-step:26000.ckpt"
         ),

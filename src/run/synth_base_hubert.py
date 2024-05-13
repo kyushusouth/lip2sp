@@ -109,7 +109,7 @@ def run_hubert(
 
 
 def main():
-    debug = True
+    debug = False
     hifigan_model_path = {
         "feature": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
@@ -138,23 +138,19 @@ def main():
     base_hubert_script_path = Path("/home/minami/lip2sp/src/synthesis/base_hubert.py")
     base_hubert_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/base_hubert")
 
-    # 読み込めないやつ
-    # feature
-    # cat_mel_hubert_encoder
-
     run_cfg_list_conv = [
-        # {
-        #     "hifigan_input": "feature_hubert_encoder",
-        #     "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/base_hubert/20240503_232759/epoch:46-step:2350.ckpt",
-        # },
-        # {
-        #     "hifigan_input": "feature_hubert_cluster",
-        #     "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/base_hubert/20240507_205750/epoch:44-step:2250.ckpt",
-        # },
-        # {
-        #     "hifigan_input": "cat_hubert_encoder_hubert_cluster",
-        #     "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/base_hubert/20240508_024744/epoch:44-step:2250.ckpt",
-        # },
+        {
+            "hifigan_input": "feature_hubert_encoder",
+            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/debug_base_hubert/20240513_161926/epoch:1-step:4.ckpt",
+        },
+        {
+            "hifigan_input": "feature_hubert_cluster",
+            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/debug_base_hubert/20240513_162053/epoch:1-step:4.ckpt",
+        },
+        {
+            "hifigan_input": "cat_hubert_encoder_hubert_cluster",
+            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/debug_base_hubert/20240513_163348/epoch:1-step:4.ckpt",
+        },
     ]
     for run_cfg in run_cfg_list_conv:
         run_conv_decoder(
@@ -172,17 +168,17 @@ def main():
         )
 
     run_cfg_list_hubert = [
-        # {
-        #     "hifigan_input": "feature_hubert_encoder",
-        #     "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/base_hubert/20240508_065428/epoch:4-step:250.ckpt",
-        # },
+        {
+            "hifigan_input": "feature_hubert_encoder",
+            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/debug_base_hubert/20240513_164850/epoch:1-step:4.ckpt",
+        },
         {
             "hifigan_input": "feature_hubert_cluster",
-            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/base_hubert/20240508_073151/epoch:6-step:350.ckpt",
+            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/debug_base_hubert/20240513_165024/epoch:1-step:4.ckpt",
         },
         {
             "hifigan_input": "cat_hubert_encoder_hubert_cluster",
-            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/base_hubert/20240511_204947/epoch:21-step:1100.ckpt",
+            "base_hubert_checkpoint_path": "/home/minami/lip2sp/checkpoints/debug_base_hubert/20240513_170311/epoch:1-step:4.ckpt",
         },
     ]
     for run_cfg in run_cfg_list_hubert:
