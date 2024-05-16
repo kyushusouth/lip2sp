@@ -95,6 +95,8 @@ jiwer = "^3.0.3"
 unidic = "^1.1.0"
 pydub = "^0.25.1"
 transformers = "^4.39.3"
+google-cloud = "^0.34.0"
+google-cloud-storage = "^2.16.0"
 
 
 [build-system]
