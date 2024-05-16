@@ -1,3 +1,4 @@
+import argparse
 import subprocess
 from pathlib import Path
 
@@ -54,6 +55,7 @@ def run_conv_decoder(
     conv_output_hubert_encoder_loss: float,
     conv_output_hubert_cluster_loss: float,
     learning_rate: float,
+    seed: int,
     debug: bool,
 ):
     if not hifigan_model_path.exists():
@@ -96,11 +98,16 @@ def run_conv_decoder(
             "training.loss_weights.hubert_output_cls_loss=0.0",
             "training.loss_weights.hubert_output_mel_loss=0.0",
             "training.finetune=false",
+            f"training.seed={seed}",
         ]
     )
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, required=True)
+    args = parser.parse_args()
+
     debug = False
     hifigan_model_path = {
         "feature": Path(
@@ -142,6 +149,7 @@ def main():
         conv_output_hubert_encoder_loss=0.0,
         conv_output_hubert_cluster_loss=0.0,
         learning_rate=1.0e-3,
+        seed=args.seed,
         debug=debug,
     )
     run_conv_decoder(
@@ -154,6 +162,7 @@ def main():
         conv_output_hubert_encoder_loss=1.0,
         conv_output_hubert_cluster_loss=0.0,
         learning_rate=1.0e-3,
+        seed=args.seed,
         debug=debug,
     )
     for loss_weight in loss_weight_list:
@@ -167,6 +176,7 @@ def main():
             conv_output_hubert_encoder_loss=0.0,
             conv_output_hubert_cluster_loss=loss_weight,
             learning_rate=1.0e-3,
+            seed=args.seed,
             debug=debug,
         )
     for loss_weight in loss_weight_list:
@@ -182,6 +192,7 @@ def main():
             conv_output_hubert_encoder_loss=1.0,
             conv_output_hubert_cluster_loss=loss_weight,
             learning_rate=1.0e-3,
+            seed=args.seed,
             debug=debug,
         )
 

@@ -5,13 +5,39 @@ def main():
     subprocess.run(
         [
             "python",
+            "/home/minami/lip2sp/src/data_process/upload_results_to_gcs.py",
+        ]
+    )
+    subprocess.run(
+        [
+            "python",
             "/home/minami/lip2sp/src/run/exp_base_hubert_conv_decoder.py",
+            "--seed",
+            "0",
         ]
     )
     subprocess.run(
         [
             "python",
             "/home/minami/lip2sp/src/run/exp_base_hubert_hubert_decoder.py",
+            "--seed",
+            "0",
+        ]
+    )
+    subprocess.run(
+        [
+            "python",
+            "/home/minami/lip2sp/src/run/exp_base_hubert_conv_decoder.py",
+            "--seed",
+            "1",
+        ]
+    )
+    subprocess.run(
+        [
+            "python",
+            "/home/minami/lip2sp/src/run/exp_base_hubert_hubert_decoder.py",
+            "--seed",
+            "1",
         ]
     )
 
