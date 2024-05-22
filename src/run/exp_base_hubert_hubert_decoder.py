@@ -202,7 +202,7 @@ def main():
             "/home/minami/lip2sp/checkpoints/debug_base_hubert"
         )
     # loss_weight_list = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
-    loss_weight_list = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+    loss_weight_list = [0.05]
 
     trained_avhubert_path = Path(
         "/home/minami/lip2sp/checkpoints/base_hubert/20240520_032120/epoch:35-step:1800.ckpt"
