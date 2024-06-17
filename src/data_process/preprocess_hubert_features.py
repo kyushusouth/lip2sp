@@ -236,6 +236,7 @@ def process_save_kmeans(
         compute_labels=False,
         random_state=42,
         verbose=1,
+        max_iter=10000,
     ).fit(hubert_encoder_output_all)
     return kmeans
 
@@ -243,8 +244,9 @@ def process_save_kmeans(
 def save_kmeans_hifi_captain(cfg: omegaconf.DictConfig) -> None:
     df = pd.read_csv(str(Path(cfg["path"]["hifi_captain"]["df_path"]).expanduser()))
     df = (
-        df.groupby(["speaker"])
-        .apply(lambda x: x.sample(frac=0.6, random_state=42), include_groups=False)
+        df.loc[df["data_split"] == "train"]
+        .groupby(["speaker"])
+        .apply(lambda x: x.sample(frac=0.5, random_state=42), include_groups=False)
         .reset_index()
         .drop(columns=["level_1"])
     )
@@ -485,10 +487,11 @@ def save_clusters(cfg: omegaconf.DictConfig):
     )
     with open(str(kmeans_path), "rb") as f:
         kmeans = pickle.load(f)
+
     save_clusters_kablab(cfg, kmeans, debug=False)
     save_clusters_hifi_captain(cfg, kmeans, debug=False)
     save_clusters_jvs(cfg, kmeans, debug=False)
-    save_clusters_jsut(cfg, kmeans, debug=False)
+    # save_clusters_jsut(cfg, kmeans, debug=False)
 
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
