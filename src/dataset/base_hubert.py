@@ -1,5 +1,4 @@
 import pathlib
-from pathlib import Path
 
 import librosa
 import numpy as np
@@ -40,9 +39,6 @@ class BaseHuBERTDataset(Dataset):
         self.embs.update(get_spk_emb_jsut(cfg))
         self.lip_mean = torch.from_numpy(np.array([cfg.data.video.lip_mean]))
         self.lip_std = torch.from_numpy(np.array([cfg.data.video.lip_std]))
-        feat_mean_var_std = np.load(str(Path(cfg.path.vctk.stat_path).expanduser()))
-        self.feat_mean = torch.from_numpy(feat_mean_var_std["feat_mean"])
-        self.feat_std = torch.from_numpy(feat_mean_var_std["feat_std"])
 
     def __len__(self) -> int:
         return len(self.data_path_list)
@@ -163,8 +159,6 @@ class BaseHuBERTDataset(Dataset):
             feature_avhubert=feature_avhubert,
             lip_mean=self.lip_mean,
             lip_std=self.lip_std,
-            feat_mean=self.feat_mean,
-            feat_std=self.feat_std,
         )
         feature_len = torch.tensor(feature.shape[-1])
         feature_hubert_len = torch.tensor(feature_hubert_encoder.shape[-1])
