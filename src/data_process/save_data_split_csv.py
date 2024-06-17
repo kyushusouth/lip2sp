@@ -1,6 +1,8 @@
 import random
 from pathlib import Path
 
+import hydra
+import omegaconf
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -170,6 +172,10 @@ def data_split_jvs():
         data = data_path.parents[1].name
         filename = data_path.stem
         speaker_num = int(str(speaker).replace("jvs", ""))
+
+        if data == "falset10" or data == "whisper10":
+            continue
+
         if speaker_num > 90:
             data_split = "test"
         elif speaker_num > 80:
@@ -226,18 +232,15 @@ def data_split_vctk():
     return df
 
 
-def main():
+@hydra.main(version_base=None, config_path="../../conf", config_name="config")
+def main(cfg: omegaconf.DictConfig) -> None:
     save_dir = Path("~/dataset/lip/data_split_csv").expanduser()
     # df = data_split_kablab()
-    # df.to_csv(str(save_dir / 'kablab.csv'), index=False)
+    # df.to_csv(str(Path(cfg.path.kablab.df_path).expanduser()), index=False)
     # df = data_split_hifi_captain()
-    # df.to_csv(str(save_dir / 'hifi_captain.csv'), index=False)
-    df = data_split_jsut()
-    df.to_csv(str(save_dir / "jsut.csv"), index=False)
-    # df = data_split_jvs()
-    # df.to_csv(str(save_dir / 'jvs.csv'), index=False)\
-    # df = data_split_vctk()
-    # df.to_csv(str(save_dir / "vctk.csv"), index=False)
+    # df.to_csv(str(Path(cfg.path.hifi_captain.df_path).expanduser()), index=False)
+    df = data_split_jvs()
+    df.to_csv(str(Path(cfg.path.jvs.df_path).expanduser()), index=False)
 
 
 if __name__ == "__main__":
