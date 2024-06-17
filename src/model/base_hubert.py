@@ -342,7 +342,7 @@ class BaseHuBERTModel(nn.Module):
         """
         args:
             lip: (B, C, H, W, T)
-            audio: (B, C, T)
+            audio: None
             lip_len: (B,)
             spk_emb: (B, C)
         return:
