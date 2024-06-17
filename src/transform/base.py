@@ -109,46 +109,6 @@ class BaseTransform:
 
         return lip
 
-    # def apply_time_masking(self, lip: torch.Tensor) -> torch.Tensor:
-    #     """
-    #     lip : (C, H, W, T)
-    #     """
-    #     T = lip.shape[-1]
-
-    #     # 最初の1秒から削除するセグメントの開始フレームを選択
-    #     mask_start_idx = torch.randint(0, self.cfg.data.video.fps, (1,))
-    #     idx = [i for i in range(T)]
-
-    #     # マスクする系列長を決定
-    #     mask_length = torch.randint(
-    #         0,
-    #         int(
-    #             self.cfg.data.video.fps
-    #             * self.cfg.training.augs.time_masking.max_masking_sec
-    #         ),
-    #         (1,),
-    #     )
-
-    #     while True:
-    #         mask_seg_idx = idx[mask_start_idx : mask_start_idx + mask_length]
-    #         seg_mean_lip = torch.mean(
-    #             lip[..., idx[mask_start_idx : mask_start_idx + mask_length]].to(
-    #                 torch.float
-    #             ),
-    #             dim=-1,
-    #         ).to(torch.uint8)
-    #         for i in mask_seg_idx:
-    #             lip[..., i] = seg_mean_lip
-
-    #         # 開始フレームを1秒先に更新
-    #         mask_start_idx += self.cfg.data.video.fps
-
-    #         # 次の範囲が動画自体の系列長を超えてしまうならループを抜ける
-    #         if mask_start_idx + mask_length - 1 > T:
-    #             break
-
-    #     return lip
-
     def apply_spec_gaussian_blur(self, feature: torch.Tensor) -> torch.Tensor:
         """
         feature: (C, T)
@@ -176,8 +136,6 @@ class BaseTransform:
         feature_avhubert: torch.Tensor,
         lip_mean: torch.Tensor,
         lip_std: torch.Tensor,
-        feat_mean: torch.Tensor,
-        feat_std: torch.Tensor,
     ) -> tuple:
         """
         lip : (C, H, W, T)
@@ -189,10 +147,6 @@ class BaseTransform:
         lip_std = lip_std.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)  # (C, 1, 1, 1)
         lip = lip / 255.0
         lip = (lip - lip_mean) / lip_std
-
-        # feat_mean = feat_mean.unsqueeze(-1)  # (C, 1)
-        # feat_std = feat_std.unsqueeze(-1)  # (C, 1)
-        # feature = (feature - feat_mean) / feat_std
 
         feature_avhubert = F.layer_norm(
             feature_avhubert, feature_avhubert.shape[1:]
@@ -228,27 +182,24 @@ class BaseTransform:
         feature_avhubert: torch.Tensor,
         lip_mean: torch.Tensor,
         lip_std: torch.Tensor,
-        feat_mean: torch.Tensor,
-        feat_std: torch.Tensor,
     ) -> tuple:
         """
         wav: (T,)
         lip : (C, H, W, T)
         feature : (T, C)
         feature_avhubert : (T, C)
-        lip_mean, lip_std, feat_mean, feat_std : (C,)
+        lip_mean, lip_std : (C,)
         """
         feature = feature.permute(1, 0)  # (C, T)
         lip = lip.permute(3, 0, 1, 2)  # (T, C, H, W)
 
         if self.train_val_test == "train":
-            if lip.shape[-1] != self.cfg.data.video.imsize_cropped:
-                if self.cfg.training.augs.random_crop.use:
-                    lip = self.apply_random_crop(lip, center=False)
-                else:
-                    lip = self.apply_random_crop(lip, center=True)
-                if self.cfg.training.augs.horizontal_flip.use:
-                    lip = self.apply_horizontal_flip(lip)
+            if self.cfg.training.augs.random_crop.use:
+                lip = self.apply_random_crop(lip, center=False)
+            else:
+                lip = self.apply_random_crop(lip, center=True)
+            if self.cfg.training.augs.horizontal_flip.use:
+                lip = self.apply_horizontal_flip(lip)
 
             lip = lip.permute(1, 2, 3, 0)  # (C, H, W, T)
 
@@ -267,8 +218,7 @@ class BaseTransform:
             if self.cfg.training.augs.spec_gaussian_blur.use:
                 feature = self.apply_spec_gaussian_blur(feature)
         else:
-            if lip.shape[-1] != self.cfg.data.video.imsize_cropped:
-                lip = self.apply_random_crop(lip, center=True)
+            lip = self.apply_random_crop(lip, center=True)
             lip = lip.permute(1, 2, 3, 0)  # (C, H, W, T)
 
         feature_avhubert = self.stacker(feature_avhubert, get_upsample(self.cfg))
@@ -279,8 +229,6 @@ class BaseTransform:
             feature_avhubert=feature_avhubert,
             lip_mean=lip_mean,
             lip_std=lip_std,
-            feat_mean=feat_mean,
-            feat_std=feat_std,
         )
 
         if self.train_val_test == "train":
