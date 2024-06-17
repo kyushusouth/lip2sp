@@ -35,8 +35,8 @@ class LitHiFiGANModel(L.LightningModule):
             for param in self.msd.parameters():
                 param.requires_grad = False
 
-        self.mel_basis = None
-        self.hann_window = None
+        self.mel_basis: None | torch.Tensor = None
+        self.hann_window: None | torch.Tensor = None
 
         self.train_step_loss_disc_f_list: list[float] = []
         self.train_step_loss_disc_s_list: list[float] = []
@@ -89,10 +89,12 @@ class LitHiFiGANModel(L.LightningModule):
         wav_pred = self.gen(feature_hubert_cluster, spk_emb)
         return wav_pred
 
-    def dynamic_range_compression_torch(self, x, C=1, clip_val=1e-5):
+    def dynamic_range_compression_torch(
+        self, x: torch.Tensor, C: int = 1, clip_val: float = 1e-5
+    ) -> torch.Tensor:
         return torch.log(torch.clamp(x, min=clip_val) * C)
 
-    def wav2mel(self, wav):
+    def wav2mel(self, wav: torch.Tensor) -> torch.Tensor:
         if self.mel_basis is None and self.hann_window is None:
             mel_filterbank = librosa.filters.mel(
                 sr=self.cfg.data.audio.sr,
@@ -144,18 +146,22 @@ class LitHiFiGANModel(L.LightningModule):
         )
         spec = torch.view_as_real(spec)
         spec = torch.sqrt(spec.pow(2).sum(-1) + (1e-9))
+        if self.mel_basis is None:
+            raise ValueError("self.mel_basis is None")
         spec = torch.matmul(self.mel_basis, spec)
         spec = self.dynamic_range_compression_torch(spec)
         return spec
 
-    def feature_loss(self, fmap_r, fmap_g):
+    def feature_loss(self, fmap_r: torch.Tensor, fmap_g: torch.Tensor) -> torch.Tensor:
         loss = 0
         for dr, dg in zip(fmap_r, fmap_g):
             for rl, gl in zip(dr, dg):
                 loss += torch.mean(torch.abs(rl - gl))
         return loss * 2
 
-    def discriminator_loss(self, disc_real_outputs, disc_generated_outputs):
+    def discriminator_loss(
+        self, disc_real_outputs: torch.Tensor, disc_generated_outputs: torch.Tensor
+    ) -> tuple:
         loss = 0
         r_losses = []
         g_losses = []
@@ -167,7 +173,7 @@ class LitHiFiGANModel(L.LightningModule):
             g_losses.append(g_loss.item())
         return loss, r_losses, g_losses
 
-    def generator_loss(self, disc_outputs):
+    def generator_loss(self, disc_outputs: torch.Tensor) -> tuple:
         loss = 0
         gen_losses = []
         for dg in disc_outputs:
