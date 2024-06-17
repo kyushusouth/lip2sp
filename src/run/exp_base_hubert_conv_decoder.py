@@ -2,52 +2,8 @@ import argparse
 import subprocess
 from pathlib import Path
 
-from src.run.utils import get_last_checkpoint_path
-
-
-def run_hifigan(
-    hifigan_script_path: Path,
-    hifigan_checkpoint_dir: Path,
-    hifigan_input: str,
-    group_name: str,
-    debug: bool,
-):
-    subprocess.run(
-        [
-            "python",
-            str(hifigan_script_path),
-            "data_choice.kablab.use=false",
-            "data_choice.jvs.use=false",
-            "data_choice.hifi_captain.use=true",
-            "data_choice.jsut.use=false",
-            f"model.hifigan.input={hifigan_input}",
-            "model.hifigan.freeze=false",
-            "training=hifigan_debug" if debug else "training=hifigan",
-            f"training.wandb.group_name={group_name}",
-            "training.finetune=false",
-        ]
-    )
-    subprocess.run(
-        [
-            "python",
-            str(hifigan_script_path),
-            "data_choice.kablab.use=false",
-            "data_choice.jvs.use=true",
-            "data_choice.hifi_captain.use=false",
-            "data_choice.jsut.use=false",
-            f"model.hifigan.input={hifigan_input}",
-            "model.hifigan.freeze=false",
-            "training=hifigan_debug" if debug else "training=hifigan",
-            f"training.wandb.group_name={group_name}",
-            "training.finetune=true",
-            f"training.finetune_start_model_path={str(get_last_checkpoint_path(hifigan_checkpoint_dir))}",
-        ]
-    )
-
 
 def run_conv_decoder(
-    hifigan_script_path: Path,
-    hifigan_checkpoint_dir: Path,
     hifigan_model_path: Path,
     base_hubert_script_path: Path,
     hifigan_input: str,
@@ -58,14 +14,6 @@ def run_conv_decoder(
     seed: int,
     debug: bool,
 ):
-    if not hifigan_model_path.exists():
-        run_hifigan(
-            hifigan_script_path=hifigan_script_path,
-            hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-            hifigan_input=hifigan_input,
-            group_name=group_name,
-            debug=debug,
-        )
     subprocess.run(
         [
             "python",
@@ -75,7 +23,7 @@ def run_conv_decoder(
             "data_choice.hifi_captain.use=false",
             "data_choice.jsut.use=false",
             f"model.hifigan.input={hifigan_input}",
-            f"model.hifigan.model_path={str(get_last_checkpoint_path(hifigan_checkpoint_dir)) if not hifigan_model_path.exists() else hifigan_model_path}",
+            f"model.hifigan.model_path={hifigan_model_path}",
             "model.hifigan.freeze=true",
             "model.avhubert.freeze=false",
             "model.spk_emb_layer.freeze=false",
@@ -109,39 +57,42 @@ def main():
     args = parser.parse_args()
 
     debug = False
+    # hifigan_model_path = {
+    #     "feature": Path(
+    #         "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
+    #     ),
+    #     "feature_hubert_encoder": Path(
+    #         "/home/minami/lip2sp/checkpoints/hifigan/20240509_021443/epoch:22-step:29900.ckpt"
+    #     ),
+    #     "feature_hubert_cluster": Path(
+    #         "/home/minami/lip2sp/checkpoints/hifigan/20240511_154553/epoch:17-step:23400.ckpt"
+    #     ),
+    #     "cat_mel_hubert_encoder": Path(
+    #         "/home/minami/lip2sp/checkpoints/hifigan/20240426_035112/epoch:19-step:26000.ckpt"
+    #     ),
+    #     "cat_mel_hubert_cluster": Path(
+    #         "/home/minami/lip2sp/checkpoints/hifigan/20240427_004201/epoch:28-step:37700.ckpt"
+    #     ),
+    #     "cat_hubert_encoder_hubert_cluster": Path(
+    #         "/home/minami/lip2sp/checkpoints/hifigan/20240510_132627/epoch:26-step:35100.ckpt"
+    #     ),
+    #     "cat_mel_hubert_encoder_hubert_cluster": Path(
+    #         "/home/minami/lip2sp/checkpoints/hifigan/20240429_040204/epoch:19-step:26000.ckpt"
+    #     ),
+    # }
     hifigan_model_path = {
-        "feature": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
-        ),
-        "feature_hubert_encoder": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240509_021443/epoch:22-step:29900.ckpt"
-        ),
-        "feature_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240511_154553/epoch:17-step:23400.ckpt"
-        ),
-        "cat_mel_hubert_encoder": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240426_035112/epoch:19-step:26000.ckpt"
-        ),
-        "cat_mel_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240427_004201/epoch:28-step:37700.ckpt"
-        ),
-        "cat_hubert_encoder_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240510_132627/epoch:26-step:35100.ckpt"
-        ),
-        "cat_mel_hubert_encoder_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240429_040204/epoch:19-step:26000.ckpt"
-        ),
+        "feature": Path(),
+        "feature_hubert_encoder": Path(),
+        "feature_hubert_cluster": Path(),
+        "cat_mel_hubert_encoder": Path(),
+        "cat_mel_hubert_cluster": Path(),
+        "cat_hubert_encoder_hubert_cluster": Path(),
+        "cat_mel_hubert_encoder_hubert_cluster": Path(),
     }
-    hifigan_script_path = Path("/home/minami/lip2sp/src/main/hifigan.py")
-    hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/hifigan")
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
-    if debug:
-        hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/debug_hifigan")
-    loss_weight_list = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+    loss_weight_list = [0.0001, 0.001, 0.01, 0.1, 1.0]
 
     run_conv_decoder(
-        hifigan_script_path=hifigan_script_path,
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
         hifigan_model_path=hifigan_model_path["feature"],
         base_hubert_script_path=base_hubert_script_path,
         hifigan_input="feature",
@@ -153,8 +104,6 @@ def main():
         debug=debug,
     )
     run_conv_decoder(
-        hifigan_script_path=hifigan_script_path,
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
         hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
         base_hubert_script_path=base_hubert_script_path,
         hifigan_input="cat_mel_hubert_encoder",
@@ -167,8 +116,6 @@ def main():
     )
     for loss_weight in loss_weight_list:
         run_conv_decoder(
-            hifigan_script_path=hifigan_script_path,
-            hifigan_checkpoint_dir=hifigan_checkpoint_dir,
             hifigan_model_path=hifigan_model_path["cat_mel_hubert_cluster"],
             base_hubert_script_path=base_hubert_script_path,
             hifigan_input="cat_mel_hubert_cluster",
@@ -181,8 +128,6 @@ def main():
         )
     for loss_weight in loss_weight_list:
         run_conv_decoder(
-            hifigan_script_path=hifigan_script_path,
-            hifigan_checkpoint_dir=hifigan_checkpoint_dir,
             hifigan_model_path=hifigan_model_path[
                 "cat_mel_hubert_encoder_hubert_cluster"
             ],
@@ -197,67 +142,5 @@ def main():
         )
 
 
-def main_missed_runs():
-    debug = False
-    hifigan_model_path = {
-        "feature": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240425_070203/epoch:26-step:35100.ckpt"
-        ),
-        "feature_hubert_encoder": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240509_021443/epoch:22-step:29900.ckpt"
-        ),
-        "feature_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240511_154553/epoch:17-step:23400.ckpt"
-        ),
-        "cat_mel_hubert_encoder": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240426_035112/epoch:19-step:26000.ckpt"
-        ),
-        "cat_mel_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240427_004201/epoch:28-step:37700.ckpt"
-        ),
-        "cat_hubert_encoder_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240510_132627/epoch:26-step:35100.ckpt"
-        ),
-        "cat_mel_hubert_encoder_hubert_cluster": Path(
-            "/home/minami/lip2sp/checkpoints/hifigan/20240429_040204/epoch:19-step:26000.ckpt"
-        ),
-    }
-    hifigan_script_path = Path("/home/minami/lip2sp/src/main/hifigan.py")
-    hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/hifigan")
-    base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
-    if debug:
-        hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/debug_hifigan")
-    loss_weight_list = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
-
-    run_conv_decoder(
-        hifigan_script_path=hifigan_script_path,
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-        hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
-        base_hubert_script_path=base_hubert_script_path,
-        hifigan_input="cat_mel_hubert_encoder",
-        group_name="conv_decoder",
-        conv_output_hubert_encoder_loss=1.0,
-        conv_output_hubert_cluster_loss=0.0,
-        learning_rate=1.0e-3,
-        seed=0,
-        debug=debug,
-    )
-
-    run_conv_decoder(
-        hifigan_script_path=hifigan_script_path,
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-        hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder_hubert_cluster"],
-        base_hubert_script_path=base_hubert_script_path,
-        hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
-        group_name="conv_decoder",
-        conv_output_hubert_encoder_loss=1.0,
-        conv_output_hubert_cluster_loss=1.0,
-        learning_rate=1.0e-3,
-        seed=1,
-        debug=debug,
-    )
-
-
 if __name__ == "__main__":
-    # main()
-    main_missed_runs()
+    main()
