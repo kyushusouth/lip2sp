@@ -1,29 +1,30 @@
+import logging
+import math
+import warnings
+from collections import OrderedDict
+from copy import deepcopy
+from typing import Callable, Dict, List, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Parameter
-import math
-import logging
-from collections import OrderedDict
-from typing import Callable, Dict, List, Optional, Tuple
-import warnings
-import numpy as np
-from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
 
 class Config:
     def __init__(self, model_size):
-        if model_size == 'base':
-            self.resnet_relu_type = 'prelu'
+        if model_size == "base":
+            self.resnet_relu_type = "prelu"
             self.resnet_weights = None
             self.audio_feat_dim = 104
             self.encoder_embed_dim = 768
             self.dropout_input = 0.1
             self.dropout_features = 0.1
-            self.modality_fuse = 'concat'
+            self.modality_fuse = "concat"
             self.encoder_layers = 12
             self.sub_encoder_layers = 0
 
@@ -35,18 +36,18 @@ class Config:
             self.encoder_attention_heads = 12
             self.attention_dropout = 0.1
             self.activation_dropout = 0.0
-            self.activation_fn = 'gelu'
+            self.activation_fn = "gelu"
             self.layer_norm_first = True
             self.encoder_layerdrop = 0.05
 
-        elif model_size == 'large':
-            self.resnet_relu_type = 'prelu'
+        elif model_size == "large":
+            self.resnet_relu_type = "prelu"
             self.resnet_weights = None
             self.audio_feat_dim = 104
             self.encoder_embed_dim = 1024
             self.dropout_input = 0.1
             self.dropout_features = 0.1
-            self.modality_fuse = 'concat'
+            self.modality_fuse = "concat"
             self.encoder_layers = 24
             self.sub_encoder_layers = 0
 
@@ -58,44 +59,48 @@ class Config:
             self.encoder_attention_heads = 16
             self.attention_dropout = 0.1
             self.activation_dropout = 0.0
-            self.activation_fn = 'gelu'
+            self.activation_fn = "gelu"
             self.layer_norm_first = True
             self.encoder_layerdrop = 0.05
 
 
 def conv3x3(in_planes, out_planes, stride=1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
+    return nn.Conv2d(
+        in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False
+    )
 
 
-def downsample_basic_block( inplanes, outplanes, stride ):
-    return  nn.Sequential(
-                nn.Conv2d(inplanes, outplanes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(outplanes),
-            )
+def downsample_basic_block(inplanes, outplanes, stride):
+    return nn.Sequential(
+        nn.Conv2d(inplanes, outplanes, kernel_size=1, stride=stride, bias=False),
+        nn.BatchNorm2d(outplanes),
+    )
 
-def downsample_basic_block_v2( inplanes, outplanes, stride ):
-    return  nn.Sequential(
-                nn.AvgPool2d(kernel_size=stride, stride=stride, ceil_mode=True, count_include_pad=False),
-                nn.Conv2d(inplanes, outplanes, kernel_size=1, stride=1, bias=False),
-                nn.BatchNorm2d(outplanes),
-            )
+
+def downsample_basic_block_v2(inplanes, outplanes, stride):
+    return nn.Sequential(
+        nn.AvgPool2d(
+            kernel_size=stride, stride=stride, ceil_mode=True, count_include_pad=False
+        ),
+        nn.Conv2d(inplanes, outplanes, kernel_size=1, stride=1, bias=False),
+        nn.BatchNorm2d(outplanes),
+    )
 
 
 class SELayer(nn.Module):
     def __init__(
-            self,
-            in_channels,
-            r,
+        self,
+        in_channels,
+        r,
     ):
         super().__init__()
         self.fc1 = nn.Linear(in_channels, in_channels // r)
         self.fc2 = nn.Linear(in_channels // r, in_channels)
 
     def forward(self, x):
-        '''
+        """
         x : (B * T, C, H, W)
-        '''
+        """
         z = torch.mean(x, dim=(2, 3))
         s = torch.relu(self.fc1(z))
         s = torch.sigmoid(self.fc2(s))
@@ -106,24 +111,30 @@ class SELayer(nn.Module):
 
 class DepthwiseSeparableConv(nn.Module):
     def __init__(
-            self,
-            in_channels,
-            hidden_channels,
-            kernel_size,
-            se_r,
+        self,
+        in_channels,
+        hidden_channels,
+        kernel_size,
+        se_r,
     ):
         super().__init__()
         padding = (kernel_size - 1) // 2
         self.pointwise_conv1 = nn.Conv2d(in_channels, hidden_channels, kernel_size=1)
-        self.depthwise_conv = nn.Conv2d(hidden_channels, hidden_channels, kernel_size=kernel_size, padding=padding, groups=hidden_channels)
+        self.depthwise_conv = nn.Conv2d(
+            hidden_channels,
+            hidden_channels,
+            kernel_size=kernel_size,
+            padding=padding,
+            groups=hidden_channels,
+        )
         self.se_layer = SELayer(hidden_channels, se_r)
         self.pointwise_conv2 = nn.Conv2d(hidden_channels, in_channels, kernel_size=1)
         self.scale = nn.Parameter(torch.tensor(1.0e-5))
 
     def forward(self, x):
-        '''
+        """
         x : (B * T, C, H, W)
-        '''
+        """
         x = self.pointwise_conv1(x)
         x = self.depthwise_conv(x)
         x = self.se_layer(x)
@@ -135,25 +146,27 @@ class DepthwiseSeparableConv(nn.Module):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, cfg, stride=1, downsample=None, relu_type = 'relu' ):
+    def __init__(
+        self, inplanes, planes, cfg, stride=1, downsample=None, relu_type="relu"
+    ):
         super(BasicBlock, self).__init__()
-        assert relu_type in ['relu','prelu']
+        assert relu_type in ["relu", "prelu"]
         self.cfg = cfg
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
 
-        if relu_type == 'relu':
+        if relu_type == "relu":
             self.relu1 = nn.ReLU(inplace=True)
             self.relu2 = nn.ReLU(inplace=True)
-        elif relu_type == 'prelu':
+        elif relu_type == "prelu":
             self.relu1 = nn.PReLU(num_parameters=planes)
             self.relu2 = nn.PReLU(num_parameters=planes)
         else:
-            raise Exception('relu type not implemented')
+            raise Exception("relu type not implemented")
 
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
-        
+
         self.downsample = downsample
         self.stride = stride
 
@@ -165,11 +178,10 @@ class BasicBlock(nn.Module):
                 se_r=cfg.prompt_block_se_r,
             )
 
-
     def forward(self, x):
-        '''
+        """
         x : (B * T, C, H, W)
-        '''
+        """
         residual = x
         out = self.conv1(x)
         out = self.bn1(out)
@@ -188,13 +200,23 @@ class BasicBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-
-    def __init__(self, block, layers, cfg, num_classes=1000, relu_type = 'relu', gamma_zero = False, avg_pool_downsample = False):
+    def __init__(
+        self,
+        block,
+        layers,
+        cfg,
+        num_classes=1000,
+        relu_type="relu",
+        gamma_zero=False,
+        avg_pool_downsample=False,
+    ):
         self.cfg = cfg
         self.inplanes = 64
         self.relu_type = relu_type
         self.gamma_zero = gamma_zero
-        self.downsample_block = downsample_basic_block_v2 if avg_pool_downsample else downsample_basic_block
+        self.downsample_block = (
+            downsample_basic_block_v2 if avg_pool_downsample else downsample_basic_block
+        )
 
         super(ResNet, self).__init__()
         self.layer1 = self._make_layer(block, 64, layers[0])
@@ -206,14 +228,14 @@ class ResNet(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.weight.data.normal_(0, math.sqrt(2.0 / n))
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
         if self.gamma_zero:
             for m in self.modules():
-                if isinstance(m, BasicBlock ):
+                if isinstance(m, BasicBlock):
                     m.bn2.weight.data.zero_()
 
     def _make_layer(self, block, planes, blocks, stride=1):
@@ -221,15 +243,26 @@ class ResNet(nn.Module):
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = self.downsample_block(
                 inplanes=self.inplanes,
-                outplanes=planes * block.expansion, 
-                stride=stride
+                outplanes=planes * block.expansion,
+                stride=stride,
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, self.cfg, stride, downsample, relu_type = self.relu_type))
+        layers.append(
+            block(
+                self.inplanes,
+                planes,
+                self.cfg,
+                stride,
+                downsample,
+                relu_type=self.relu_type,
+            )
+        )
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, self.cfg, relu_type = self.relu_type))
+            layers.append(
+                block(self.inplanes, planes, self.cfg, relu_type=self.relu_type)
+            )
 
         return nn.Sequential(*layers)
 
@@ -249,22 +282,36 @@ class ResEncoder(nn.Module):
         self.cfg = cfg
         self.frontend_nout = 64
         self.backend_out = 512
-        frontend_relu = nn.PReLU(num_parameters=self.frontend_nout) if relu_type == 'prelu' else nn.ReLU()
+        frontend_relu = (
+            nn.PReLU(num_parameters=self.frontend_nout)
+            if relu_type == "prelu"
+            else nn.ReLU()
+        )
         self.frontend3D = nn.Sequential(
-            nn.Conv3d(1, self.frontend_nout, kernel_size=(5, 7, 7), stride=(1, 2, 2), padding=(2, 3, 3), bias=False),
+            nn.Conv3d(
+                1,
+                self.frontend_nout,
+                kernel_size=(5, 7, 7),
+                stride=(1, 2, 2),
+                padding=(2, 3, 3),
+                bias=False,
+            ),
             nn.BatchNorm3d(self.frontend_nout),
             frontend_relu,
-            nn.MaxPool3d( kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
+        )
         self.trunk = ResNet(BasicBlock, [2, 2, 2, 2], cfg=cfg, relu_type=relu_type)
         if weights is not None:
             logger.info(f"Load {weights} for resnet")
-            std = torch.load(weights, map_location=torch.device('cpu'))['model_state_dict']
+            std = torch.load(weights, map_location=torch.device("cpu"))[
+                "model_state_dict"
+            ]
             frontend_std, trunk_std = OrderedDict(), OrderedDict()
             for key, val in std.items():
-                new_key = '.'.join(key.split('.')[1:])
-                if 'frontend3D' in key:
+                new_key = ".".join(key.split(".")[1:])
+                if "frontend3D" in key:
                     frontend_std[new_key] = val
-                if 'trunk' in key:
+                if "trunk" in key:
                     trunk_std[new_key] = val
             self.frontend3D.load_state_dict(frontend_std)
             self.trunk.load_state_dict(trunk_std)
@@ -292,8 +339,8 @@ class ResEncoder(nn.Module):
     def threeD_to_2D_tensor(self, x):
         n_batch, n_channels, s_time, sx, sy = x.shape
         x = x.transpose(1, 2).contiguous()
-        return x.reshape(n_batch*s_time, n_channels, sx, sy)
-    
+        return x.reshape(n_batch * s_time, n_channels, sx, sy)
+
 
 def gelu_accurate(x):
     if not hasattr(gelu_accurate, "_a"):
@@ -360,7 +407,7 @@ class FairseqDropout(nn.Module):
         name: str,
         retain_dropout: bool = False,
         retain_dropout_modules: Optional[List[str]] = None,
-        **kwargs
+        **kwargs,
     ):
         if retain_dropout:
             if retain_dropout_modules is not None and self.module_name is None:
@@ -377,8 +424,8 @@ class FairseqDropout(nn.Module):
                 )
                 self.apply_during_inference = True
             else:
-                logger.info("Disabling dropout for module: {}".format(name))\
-                
+                logger.info("Disabling dropout for module: {}".format(name))
+
 
 def quant_noise(module, p, block_size):
     """
@@ -523,7 +570,7 @@ class MultiheadAttention(nn.Module):
         assert (
             self.head_dim * num_heads == self.embed_dim
         ), "embed_dim must be divisible by num_heads"
-        self.scaling = self.head_dim ** -0.5
+        self.scaling = self.head_dim**-0.5
 
         self.self_attention = self_attention
         self.encoder_decoder_attention = encoder_decoder_attention
@@ -827,9 +874,7 @@ class MultiheadAttention(nn.Module):
         if before_softmax:
             return attn_weights, v
 
-        attn_weights_float = softmax(
-            attn_weights, dim=-1, onnx_trace=self.onnx_trace
-        )
+        attn_weights_float = softmax(attn_weights, dim=-1, onnx_trace=self.onnx_trace)
         attn_weights = attn_weights_float.type_as(attn_weights)
         attn_probs = self.dropout_module(attn_weights)
 
@@ -987,7 +1032,6 @@ class TransformerSentenceEncoderLayer(nn.Module):
         activation_fn: str = "relu",
         layer_norm_first: bool = False,
     ) -> None:
-
         super().__init__()
         # Initialize parameters
         self.embedding_dim = embedding_dim
@@ -1072,7 +1116,7 @@ class TransformerSentenceEncoderLayer(nn.Module):
             x = self.final_layer_norm(x)
 
         return x, attn
-    
+
 
 class SamePad(nn.Module):
     def __init__(self, kernel_size, causal=False):
@@ -1105,9 +1149,7 @@ def init_bert_params(module):
     def normal_(data):
         # with FSDP, module params will be on CUDA, so we cast them back to CPU
         # so that the RNG is consistent with and without FSDP
-        data.copy_(
-            data.cpu().normal_(mean=0.0, std=0.02).to(data.device)
-        )
+        data.copy_(data.cpu().normal_(mean=0.0, std=0.02).to(data.device))
 
     if isinstance(module, nn.Linear):
         normal_(module.weight.data)
@@ -1187,10 +1229,10 @@ class TransformerEncoder(nn.Module):
             torch.nn.init.xavier_uniform_(self.soft_prompt.weight)
 
     def forward(self, x, padding_mask=None, layer=None):
-        '''
+        """
         x : (B, T, C)
         padding_mask : (B, T)
-        '''
+        """
         x, layer_results = self.extract_features(x, padding_mask, layer)
 
         if self.layer_norm_first and layer is None:
@@ -1203,7 +1245,11 @@ class TransformerEncoder(nn.Module):
         if padding_mask is not None:
             # x = index_put(x, padding_mask, 0)
             # onnxの変換でバグるので変更
-            mask_int = padding_mask.unsqueeze(-1).expand(padding_mask.shape[0], padding_mask.shape[1], x.shape[-1]).to(dtype=torch.int, device=x.device)
+            mask_int = (
+                padding_mask.unsqueeze(-1)
+                .expand(padding_mask.shape[0], padding_mask.shape[1], x.shape[-1])
+                .to(dtype=torch.int, device=x.device)
+            )
             x -= x * mask_int
 
         # concatenate prompt
@@ -1211,10 +1257,15 @@ class TransformerEncoder(nn.Module):
             prompt = self.soft_prompt.weight.unsqueeze(0).repeat(x.shape[0], 1, 1)
             x = torch.cat([prompt, x], dim=1)
             # プロンプトを用いるため、マスクを更新（マスクがパディングされないようにする）
-            non_padded_length = torch.tensor([x.shape[1] - padding_mask[i].sum() for i in range(padding_mask.shape[0])]).to(device=x.device)
+            non_padded_length = torch.tensor(
+                [
+                    x.shape[1] - padding_mask[i].sum()
+                    for i in range(padding_mask.shape[0])
+                ]
+            ).to(device=x.device)
             padding_mask = torch.arange(x.shape[1]).unsqueeze(1).to(device=x.device)
             padding_mask = padding_mask >= non_padded_length
-            padding_mask = padding_mask.permute(1, 0)   # (B, T)
+            padding_mask = padding_mask.permute(1, 0)  # (B, T)
 
         x_conv = self.pos_conv(x.transpose(1, 2))
         x_conv = x_conv.transpose(1, 2)
@@ -1246,8 +1297,8 @@ class TransformerEncoder(nn.Module):
         # T x B x C -> B x T x C
         x = x.transpose(0, 1)
         if self.args.use_soft_prompt:
-            x = x[:, :-self.args.n_prompt_tokens, :]
-        
+            x = x[:, : -self.args.n_prompt_tokens, :]
+
         return x, layer_results
 
     def max_positions(self):
@@ -1257,7 +1308,7 @@ class TransformerEncoder(nn.Module):
     def upgrade_state_dict_named(self, state_dict, name):
         """Upgrade a (possibly old) state dict for new versions of fairseq."""
         return state_dict
-    
+
 
 class SubModel(nn.Module):
     def __init__(self, resnet=None, input_dim=None, cfg=None):
@@ -1285,14 +1336,20 @@ class AVHuBERT(nn.Module):
         super().__init__()
         sub_cfg = deepcopy(cfg)
         sub_cfg.encoder_layers = sub_cfg.sub_encoder_layers
-        resnet = ResEncoder(relu_type=cfg.resnet_relu_type, weights=cfg.resnet_weights, cfg=cfg)
-        self.feature_extractor_audio = SubModel(resnet=None, input_dim=cfg.audio_feat_dim, cfg=sub_cfg)
-        self.feature_extractor_video = SubModel(resnet=resnet, input_dim=resnet.backend_out, cfg=sub_cfg)
+        resnet = ResEncoder(
+            relu_type=cfg.resnet_relu_type, weights=cfg.resnet_weights, cfg=cfg
+        )
+        self.feature_extractor_audio = SubModel(
+            resnet=None, input_dim=cfg.audio_feat_dim, cfg=sub_cfg
+        )
+        self.feature_extractor_video = SubModel(
+            resnet=resnet, input_dim=resnet.backend_out, cfg=sub_cfg
+        )
         self.modality_fuse = cfg.modality_fuse
         self.encoder_embed_dim = cfg.encoder_embed_dim
-        if self.modality_fuse == 'concat':
+        if self.modality_fuse == "concat":
             self.embed = cfg.encoder_embed_dim * 2
-        elif self.modality_fuse == 'add':
+        elif self.modality_fuse == "add":
             self.embed = cfg.encoder_embed_dim
         self.post_extract_proj = (
             nn.Linear(self.embed, cfg.encoder_embed_dim)
@@ -1305,20 +1362,18 @@ class AVHuBERT(nn.Module):
         self.layer_norm = LayerNorm(self.embed)
 
     def forward_padding_mask(
-        self, 
+        self,
         features: torch.Tensor,
         padding_mask: torch.Tensor,
     ) -> torch.Tensor:
-        '''
+        """
         features: (B, T, C)
         padding_mask: (B, T)
-        '''
+        """
         # extra = padding_mask.size(1) % features.size(1)
         # if extra > 0:
         #     padding_mask = padding_mask[:, :-extra]
-        padding_mask = padding_mask.view(
-            padding_mask.size(0), features.size(1), -1
-        )
+        padding_mask = padding_mask.view(padding_mask.size(0), features.size(1), -1)
         padding_mask = padding_mask.all(-1)
         return padding_mask
 
@@ -1330,27 +1385,31 @@ class AVHuBERT(nn.Module):
         padding_mask=None,
         output_layer=None,
     ):
-        '''
+        """
         video : (B, C, T, H, W)
         audio : (B, C, T)
         padding_mask (padding elements are indicated by 1.) : (B, T)
-        '''
+        """
         if video is not None and audio is None:
             features_video = self.feature_extractor_video(video)
-            features_audio = features_video.new_zeros(features_video.size(0), self.encoder_embed_dim, features_video.size(-1))
+            features_audio = features_video.new_zeros(
+                features_video.size(0), self.encoder_embed_dim, features_video.size(-1)
+            )
         elif video is None and audio is not None:
             features_audio = self.feature_extractor_audio(audio)
-            features_video = features_audio.new_zeros(features_audio.size(0), self.encoder_embed_dim, features_audio.size(-1))
+            features_video = features_audio.new_zeros(
+                features_audio.size(0), self.encoder_embed_dim, features_audio.size(-1)
+            )
         elif video is not None and audio is not None:
             features_video = self.feature_extractor_video(video)
             features_audio = self.feature_extractor_audio(audio)
 
-        if self.modality_fuse == 'concat':
+        if self.modality_fuse == "concat":
             features = torch.cat([features_audio, features_video], dim=1)
-        elif self.modality_fuse == 'add':
+        elif self.modality_fuse == "add":
             features = features_audio + features_video
 
-        features = features.transpose(1, 2)     # (B, T, C)
+        features = features.transpose(1, 2)  # (B, T, C)
         features = self.layer_norm(features)
 
         if padding_mask is not None:
@@ -1367,5 +1426,5 @@ class AVHuBERT(nn.Module):
                 features,
                 padding_mask=padding_mask,
                 layer=None if output_layer is None else output_layer - 1,
-            )   # (B, T, C)
+            )  # (B, T, C)
             return features
