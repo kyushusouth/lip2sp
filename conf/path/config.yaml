@@ -3,28 +3,28 @@ kablab:
   video_dir: "~/dataset/lip/avhubert_preprocess_fps25"
   hubert_feature_prj_output_dir: "~/dataset/lip/hubert/feature_prj_output"
   hubert_encoder_output_dir: "~/dataset/lip/hubert/encoder_output"
-  hubert_cluster_dir: "~/dataset/lip/hubert/cluster"
+  hubert_cluster_dir: "~/dataset/lip/hubert/cluster_fix"
   df_path: "~/dataset/lip/data_split.csv"
-  emb_dir: "~/dataset/lip/emb"
+  emb_dir: "~/dataset/lip/emb_fix"
   text_dir: "~/dataset/lip/utt"
 
 jvs:
   audio_dir: "~/dataset/jvs_ver1_cut_silence"
   hubert_feature_prj_output_dir: "~/dataset/jvs_ver1_cut_silence/hubert/feature_prj_output"
   hubert_encoder_output_dir: "~/dataset/jvs_ver1_cut_silence/hubert/encoder_output"
-  hubert_cluster_dir: "~/dataset/jvs_ver1_cut_silence/hubert/cluster"
-  df_path: "~/dataset/jvs_ver1_cut_silence/data_split.csv"
-  emb_dir: "~/dataset/jvs_ver1/emb"
+  hubert_cluster_dir: "~/dataset/jvs_ver1_cut_silence/hubert/cluster_fix"
+  df_path: "~/dataset/jvs_ver1_cut_silence/data_split_fix.csv"
+  emb_dir: "~/dataset/jvs_ver1_cut_silence/emb_fix"
   stat_path: "~/dataset/lip/stat/mel/jvs.npz"
 
 hifi_captain:
   audio_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP"
   hubert_feature_prj_output_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/feature_prj_output"
   hubert_encoder_output_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/encoder_output"
-  hubert_cluster_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/cluster"
-  hubert_kmeans_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/kmeans"
+  hubert_cluster_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/cluster_fix"
+  hubert_kmeans_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/kmeans_fix"
   df_path: "~/dataset/hi-fi-captain_cut_silence/ja-JP/data_split.csv"
-  emb_dir: "~/dataset/hi-fi-captain/ja-JP"
+  emb_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/emb_fix"
   stat_path: "~/dataset/lip/stat/mel/hi-fi-captain.npz"
 
 jsut:
