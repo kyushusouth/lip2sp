@@ -278,7 +278,10 @@ class Generator(torch.nn.Module):
         self, inputs_dict: dict[str, torch.Tensor], spk_emb: torch.Tensor
     ) -> torch.Tensor:
         """
-        x: (B, T, C) or (B, T)
+        inputs_dict:
+            feature: (B, C, T)
+            feature_hubert_encoder: (B, C, T)
+            feature_hubert_cluster: (B, T)
         spk_emb: (B, C)
         """
         if self.cfg.model.hifigan.input == "feature":
