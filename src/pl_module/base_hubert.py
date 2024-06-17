@@ -236,11 +236,11 @@ class LitBaseHuBERTModel(L.LightningModule):
             (conv_output_mel_loss * self.cfg.training.loss_weights.conv_output_mel_loss)
             + (
                 conv_output_hubert_encoder_loss
-                * self.cfg.training.loss_weights["conv_output_hubert_encoder_loss"]
+                * self.cfg.training.loss_weights.conv_output_hubert_encoder_loss
             )
             + (
                 conv_output_hubert_cluster_loss
-                * self.cfg.training.loss_weights["conv_output_hubert_cluster_loss"]
+                * self.cfg.training.loss_weights.conv_output_hubert_cluster_loss
             )
             + (
                 conv_output_hubert_prj_loss
