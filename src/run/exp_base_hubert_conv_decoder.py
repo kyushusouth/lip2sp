@@ -81,13 +81,21 @@ def main():
     #     ),
     # }
     hifigan_model_path = {
-        "feature": Path(),
-        "feature_hubert_encoder": Path(),
-        "feature_hubert_cluster": Path(),
-        "cat_mel_hubert_encoder": Path(),
-        "cat_mel_hubert_cluster": Path(),
-        "cat_hubert_encoder_hubert_cluster": Path(),
-        "cat_mel_hubert_encoder_hubert_cluster": Path(),
+        "feature": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240618_133442/epoch:19-step:26000.ckpt"
+        ),
+        "feature_hubert_encoder": Path(""),
+        "feature_hubert_cluster": Path(""),
+        "cat_mel_hubert_encoder": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240619_092235/epoch:26-step:35100.ckpt"
+        ),
+        "cat_mel_hubert_cluster": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240620_050910/epoch:23-step:31200.ckpt"
+        ),
+        "cat_hubert_encoder_hubert_cluster": Path(""),
+        "cat_mel_hubert_encoder_hubert_cluster": Path(
+            "/home/minami/lip2sp/checkpoints/hifigan/20240621_005533/epoch:19-step:26000.ckpt"
+        ),
     }
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
     loss_weight_list = [0.0001, 0.001, 0.01, 0.1, 1.0]
