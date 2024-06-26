@@ -47,7 +47,7 @@ def run_hifigan(
 
 
 def main():
-    debug = False
+    debug = True
     hifigan_script_path = Path("/home/minami/lip2sp/src/main/hifigan.py")
     hifigan_checkpoint_dir = Path("/home/minami/lip2sp/checkpoints/hifigan")
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
@@ -57,7 +57,7 @@ def main():
     run_hifigan(
         hifigan_script_path=hifigan_script_path,
         hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-        hifigan_checkpoint_path="/home/minami/lip2sp/checkpoints/hifigan/20240617_212314/epoch:28-step:136764.ckpt",
+        hifigan_checkpoint_path=None,
         hifigan_input="feature",
         group_name="hifigan",
         debug=debug,

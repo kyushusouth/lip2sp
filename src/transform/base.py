@@ -198,6 +198,7 @@ class BaseTransform:
                 lip = self.apply_random_crop(lip, center=False)
             else:
                 lip = self.apply_random_crop(lip, center=True)
+
             if self.cfg.training.augs.horizontal_flip.use:
                 lip = self.apply_horizontal_flip(lip)
 

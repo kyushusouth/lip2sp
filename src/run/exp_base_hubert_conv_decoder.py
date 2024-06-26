@@ -56,7 +56,7 @@ def main():
     parser.add_argument("--seed", type=int, required=True)
     args = parser.parse_args()
 
-    debug = False
+    debug = True
     hifigan_model_path = {
         "feature": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240618_133442/epoch:19-step:26000.ckpt"
@@ -77,56 +77,29 @@ def main():
     base_hubert_script_path = Path("/home/minami/lip2sp/src/main/base_hubert.py")
     loss_weight_list = [0.0001, 0.001, 0.01, 0.1, 1.0]
 
-    # run_conv_decoder(
-    #     hifigan_model_path=hifigan_model_path["feature"],
-    #     base_hubert_script_path=base_hubert_script_path,
-    #     hifigan_input="feature",
-    #     group_name="conv_decoder",
-    #     conv_output_hubert_encoder_loss=0.0,
-    #     conv_output_hubert_cluster_loss=0.0,
-    #     learning_rate=1.0e-3,
-    #     seed=args.seed,
-    #     debug=debug,
-    # )
-    # run_conv_decoder(
-    #     hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
-    #     base_hubert_script_path=base_hubert_script_path,
-    #     hifigan_input="cat_mel_hubert_encoder",
-    #     group_name="conv_decoder",
-    #     conv_output_hubert_encoder_loss=1.0,
-    #     conv_output_hubert_cluster_loss=0.0,
-    #     learning_rate=1.0e-3,
-    #     seed=args.seed,
-    #     debug=debug,
-    # )
-    # for loss_weight in loss_weight_list:
-    #     run_conv_decoder(
-    #         hifigan_model_path=hifigan_model_path["cat_mel_hubert_cluster"],
-    #         base_hubert_script_path=base_hubert_script_path,
-    #         hifigan_input="cat_mel_hubert_cluster",
-    #         group_name="conv_decoder",
-    #         conv_output_hubert_encoder_loss=0.0,
-    #         conv_output_hubert_cluster_loss=loss_weight,
-    #         learning_rate=1.0e-3,
-    #         seed=args.seed,
-    #         debug=debug,
-    #     )
-    # for loss_weight in loss_weight_list:
-    #     run_conv_decoder(
-    #         hifigan_model_path=hifigan_model_path[
-    #             "cat_mel_hubert_encoder_hubert_cluster"
-    #         ],
-    #         base_hubert_script_path=base_hubert_script_path,
-    #         hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
-    #         group_name="conv_decoder",
-    #         conv_output_hubert_encoder_loss=1.0,
-    #         conv_output_hubert_cluster_loss=loss_weight,
-    #         learning_rate=1.0e-3,
-    #         seed=args.seed,
-    #         debug=debug,
-    #     )
-
-    for loss_weight in [0.001]:
+    run_conv_decoder(
+        hifigan_model_path=hifigan_model_path["feature"],
+        base_hubert_script_path=base_hubert_script_path,
+        hifigan_input="feature",
+        group_name="conv_decoder",
+        conv_output_hubert_encoder_loss=0.0,
+        conv_output_hubert_cluster_loss=0.0,
+        learning_rate=1.0e-3,
+        seed=args.seed,
+        debug=debug,
+    )
+    run_conv_decoder(
+        hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
+        base_hubert_script_path=base_hubert_script_path,
+        hifigan_input="cat_mel_hubert_encoder",
+        group_name="conv_decoder",
+        conv_output_hubert_encoder_loss=1.0,
+        conv_output_hubert_cluster_loss=0.0,
+        learning_rate=1.0e-3,
+        seed=args.seed,
+        debug=debug,
+    )
+    for loss_weight in loss_weight_list:
         run_conv_decoder(
             hifigan_model_path=hifigan_model_path["cat_mel_hubert_cluster"],
             base_hubert_script_path=base_hubert_script_path,
@@ -138,7 +111,7 @@ def main():
             seed=args.seed,
             debug=debug,
         )
-    for loss_weight in [0.001]:
+    for loss_weight in loss_weight_list:
         run_conv_decoder(
             hifigan_model_path=hifigan_model_path[
                 "cat_mel_hubert_encoder_hubert_cluster"

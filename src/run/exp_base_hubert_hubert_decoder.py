@@ -171,7 +171,7 @@ def main():
     parser.add_argument("--seed", type=int, required=True)
     args = parser.parse_args()
 
-    debug = False
+    debug = True
     hifigan_model_path = {
         "feature": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240618_133442/epoch:19-step:26000.ckpt"
@@ -197,56 +197,56 @@ def main():
         )
     loss_weight_list = [0.0001, 0.001, 0.01, 0.1, 1.0]
 
-    trained_avhubert_path = Path(
-        "/home/minami/lip2sp/checkpoints/base_hubert/20240622_082506/epoch:47-step:2400.ckpt"
-    )
+    # trained_avhubert_path = Path(
+    #     "/home/minami/lip2sp/checkpoints/base_hubert/20240622_082506/epoch:47-step:2400.ckpt"
+    # )
 
-    # trained_avhubert_path = run_avhubert(
-    #     hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
-    #     base_hubert_script_path=base_hubert_script_path,
-    #     base_hubert_checkpoint_dir=base_hubert_checkpoint_dir,
-    #     hifigan_input="cat_mel_hubert_encoder",
-    #     group_name="proposed",
-    #     learning_rate=1.0e-3,
-    #     seed=args.seed,
-    #     debug=debug,
-    # )
-    # base_hubert_last_checkpoint_path = run_hubert(
-    #     hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
-    #     base_hubert_script_path=base_hubert_script_path,
-    #     base_hubert_checkpoint_dir=base_hubert_checkpoint_dir,
-    #     trained_avhubert_path=trained_avhubert_path,
-    #     hifigan_input="cat_mel_hubert_encoder",
-    #     group_name="proposed",
-    #     learning_rate=5.0e-4,
-    #     hubert_output_reg_masked_loss=1.0,
-    #     hubert_output_reg_unmasked_loss=0.0,
-    #     hubert_output_reg_loss=1.0,
-    #     hubert_output_cls_masked_loss=0.0,
-    #     hubert_output_cls_unmasked_loss=0.0,
-    #     hubert_output_cls_loss=0.0,
-    #     encoder_input_mask_use=False,
-    #     seed=args.seed,
-    #     debug=debug,
-    # )
-    # run_hubert_all_finetuning(
-    #     hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
-    #     base_hubert_script_path=base_hubert_script_path,
-    #     base_hubert_checkpoint_path=base_hubert_last_checkpoint_path,
-    #     trained_avhubert_path=trained_avhubert_path,
-    #     hifigan_input="cat_mel_hubert_encoder",
-    #     group_name="proposed",
-    #     learning_rate=5.0e-4,
-    #     hubert_output_reg_masked_loss=1.0,
-    #     hubert_output_reg_unmasked_loss=0.0,
-    #     hubert_output_reg_loss=1.0,
-    #     hubert_output_cls_masked_loss=0.0,
-    #     hubert_output_cls_unmasked_loss=0.0,
-    #     hubert_output_cls_loss=0.0,
-    #     encoder_input_mask_use=False,
-    #     seed=args.seed,
-    #     debug=debug,
-    # )
+    trained_avhubert_path = run_avhubert(
+        hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
+        base_hubert_script_path=base_hubert_script_path,
+        base_hubert_checkpoint_dir=base_hubert_checkpoint_dir,
+        hifigan_input="cat_mel_hubert_encoder",
+        group_name="proposed",
+        learning_rate=1.0e-3,
+        seed=args.seed,
+        debug=debug,
+    )
+    base_hubert_last_checkpoint_path = run_hubert(
+        hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
+        base_hubert_script_path=base_hubert_script_path,
+        base_hubert_checkpoint_dir=base_hubert_checkpoint_dir,
+        trained_avhubert_path=trained_avhubert_path,
+        hifigan_input="cat_mel_hubert_encoder",
+        group_name="proposed",
+        learning_rate=5.0e-4,
+        hubert_output_reg_masked_loss=1.0,
+        hubert_output_reg_unmasked_loss=0.0,
+        hubert_output_reg_loss=1.0,
+        hubert_output_cls_masked_loss=0.0,
+        hubert_output_cls_unmasked_loss=0.0,
+        hubert_output_cls_loss=0.0,
+        encoder_input_mask_use=False,
+        seed=args.seed,
+        debug=debug,
+    )
+    run_hubert_all_finetuning(
+        hifigan_model_path=hifigan_model_path["cat_mel_hubert_encoder"],
+        base_hubert_script_path=base_hubert_script_path,
+        base_hubert_checkpoint_path=base_hubert_last_checkpoint_path,
+        trained_avhubert_path=trained_avhubert_path,
+        hifigan_input="cat_mel_hubert_encoder",
+        group_name="proposed",
+        learning_rate=5.0e-4,
+        hubert_output_reg_masked_loss=1.0,
+        hubert_output_reg_unmasked_loss=0.0,
+        hubert_output_reg_loss=1.0,
+        hubert_output_cls_masked_loss=0.0,
+        hubert_output_cls_unmasked_loss=0.0,
+        hubert_output_cls_loss=0.0,
+        encoder_input_mask_use=False,
+        seed=args.seed,
+        debug=debug,
+    )
     base_hubert_last_checkpoint_path = run_hubert(
         hifigan_model_path=hifigan_model_path["cat_mel_hubert_cluster"],
         base_hubert_script_path=base_hubert_script_path,
@@ -283,47 +283,47 @@ def main():
         seed=args.seed,
         debug=debug,
     )
-    # for loss_weight in loss_weight_list:
-    #     base_hubert_last_checkpoint_path = run_hubert(
-    #         hifigan_model_path=hifigan_model_path[
-    #             "cat_mel_hubert_encoder_hubert_cluster"
-    #         ],
-    #         base_hubert_script_path=base_hubert_script_path,
-    #         base_hubert_checkpoint_dir=base_hubert_checkpoint_dir,
-    #         trained_avhubert_path=trained_avhubert_path,
-    #         hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
-    #         group_name="proposed",
-    #         learning_rate=5.0e-4,
-    #         hubert_output_reg_masked_loss=1.0,
-    #         hubert_output_reg_unmasked_loss=0.0,
-    #         hubert_output_reg_loss=1.0,
-    #         hubert_output_cls_masked_loss=1.0,
-    #         hubert_output_cls_unmasked_loss=0.0,
-    #         hubert_output_cls_loss=loss_weight,
-    #         encoder_input_mask_use=False,
-    #         seed=args.seed,
-    #         debug=debug,
-    #     )
-    #     run_hubert_all_finetuning(
-    #         hifigan_model_path=hifigan_model_path[
-    #             "cat_mel_hubert_encoder_hubert_cluster"
-    #         ],
-    #         base_hubert_script_path=base_hubert_script_path,
-    #         base_hubert_checkpoint_path=base_hubert_last_checkpoint_path,
-    #         trained_avhubert_path=trained_avhubert_path,
-    #         hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
-    #         group_name="proposed",
-    #         learning_rate=5.0e-4,
-    #         hubert_output_reg_masked_loss=1.0,
-    #         hubert_output_reg_unmasked_loss=0.0,
-    #         hubert_output_reg_loss=1.0,
-    #         hubert_output_cls_masked_loss=1.0,
-    #         hubert_output_cls_unmasked_loss=0.0,
-    #         hubert_output_cls_loss=loss_weight,
-    #         encoder_input_mask_use=False,
-    #         seed=args.seed,
-    #         debug=debug,
-    #     )
+    for loss_weight in loss_weight_list:
+        base_hubert_last_checkpoint_path = run_hubert(
+            hifigan_model_path=hifigan_model_path[
+                "cat_mel_hubert_encoder_hubert_cluster"
+            ],
+            base_hubert_script_path=base_hubert_script_path,
+            base_hubert_checkpoint_dir=base_hubert_checkpoint_dir,
+            trained_avhubert_path=trained_avhubert_path,
+            hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
+            group_name="proposed",
+            learning_rate=5.0e-4,
+            hubert_output_reg_masked_loss=1.0,
+            hubert_output_reg_unmasked_loss=0.0,
+            hubert_output_reg_loss=1.0,
+            hubert_output_cls_masked_loss=1.0,
+            hubert_output_cls_unmasked_loss=0.0,
+            hubert_output_cls_loss=loss_weight,
+            encoder_input_mask_use=False,
+            seed=args.seed,
+            debug=debug,
+        )
+        run_hubert_all_finetuning(
+            hifigan_model_path=hifigan_model_path[
+                "cat_mel_hubert_encoder_hubert_cluster"
+            ],
+            base_hubert_script_path=base_hubert_script_path,
+            base_hubert_checkpoint_path=base_hubert_last_checkpoint_path,
+            trained_avhubert_path=trained_avhubert_path,
+            hifigan_input="cat_mel_hubert_encoder_hubert_cluster",
+            group_name="proposed",
+            learning_rate=5.0e-4,
+            hubert_output_reg_masked_loss=1.0,
+            hubert_output_reg_unmasked_loss=0.0,
+            hubert_output_reg_loss=1.0,
+            hubert_output_cls_masked_loss=1.0,
+            hubert_output_cls_unmasked_loss=0.0,
+            hubert_output_cls_loss=loss_weight,
+            encoder_input_mask_use=False,
+            seed=args.seed,
+            debug=debug,
+        )
 
 
 if __name__ == "__main__":
