@@ -83,12 +83,6 @@ class LitHiFiGANModel(L.LightningModule):
             "pred": np.random.rand(1),
         }
 
-    def forward(
-        self, feature_hubert_cluster: torch.Tensor, spk_emb: torch.Tensor
-    ) -> torch.Tensor:
-        wav_pred = self.gen(feature_hubert_cluster, spk_emb)
-        return wav_pred
-
     def dynamic_range_compression_torch(
         self, x: torch.Tensor, C: int = 1, clip_val: float = 1e-5
     ) -> torch.Tensor:
