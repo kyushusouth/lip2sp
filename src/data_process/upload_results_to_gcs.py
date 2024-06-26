@@ -44,7 +44,18 @@ def upload_directory_with_transfer_manager(
     paths = directory_as_path_obj.rglob("*")
 
     # Filter so the list only includes files, not directories themselves.
-    file_paths = [path for path in paths if path.is_file()]
+    x = [
+        "20240621_134621",
+        "20240621_155144",
+        "20240621_202419",
+        "20240622_003027",
+        "20240622_103111",
+        "20240623_001016",
+        "20240622_161416",
+    ]
+    file_paths = [
+        path for path in paths if path.is_file() and path.parents[2].name in x
+    ]
 
     # These paths are relative to the current working directory. Next, make them
     # relative to `directory`
