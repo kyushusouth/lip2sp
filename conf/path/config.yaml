@@ -7,6 +7,8 @@ kablab:
   df_path: "~/dataset/lip/data_split.csv"
   emb_dir: "~/dataset/lip/emb_fix"
   text_dir: "~/dataset/lip/utt"
+  forced_alignment_results_dir: "~/dataset/lip/forced_alignment_results"
+  onehot_encoder_dir: "~/dataset/lip/forced_alignment_results/onehot_encoders"
 
 jvs:
   audio_dir: "~/dataset/jvs_ver1_cut_silence"

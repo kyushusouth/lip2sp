@@ -98,6 +98,7 @@ transformers = "^4.39.3"
 google-cloud = "^0.34.0"
 google-cloud-storage = "^2.16.0"
 colorama = "^0.4.6"
+praat-textgrids = "^1.4.0"
 
 
 [build-system]

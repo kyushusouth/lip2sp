@@ -171,7 +171,7 @@ def main():
     parser.add_argument("--seed", type=int, required=True)
     args = parser.parse_args()
 
-    debug = True
+    debug = False
     hifigan_model_path = {
         "feature": Path(
             "/home/minami/lip2sp/checkpoints/hifigan/20240618_133442/epoch:19-step:26000.ckpt"

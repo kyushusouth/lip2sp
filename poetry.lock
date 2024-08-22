@@ -2760,6 +2760,17 @@ sftp = ["paramiko (>=2.7.0)"]
 xxhash = ["xxhash (>=1.4.3)"]
 
 [[package]]
+name = "praat-textgrids"
+version = "1.4.0"
+description = "Manipulation of Praat TextGrids"
+optional = false
+python-versions = "*"
+files = [
+    {file = "praat-textgrids-1.4.0.tar.gz", hash = "sha256:57d86adcbb01722e732a898e37c85833a6326731e2c97802b18793ef1a64602c"},
+    {file = "praat_textgrids-1.4.0-py3-none-any.whl", hash = "sha256:288ebf4061f2994adc0a6110df28eebd3b7fb0c68e3196e1f222d6b4f33fa823"},
+]
+
+[[package]]
 name = "prompt-toolkit"
 version = "3.0.43"
 description = "Library for building powerful interactive command lines in Python"
@@ -4858,4 +4869,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "b7f64872a16da23ffe8c5a40c02648dca6739906e2f5d145004d5b5189ee0e02"
+content-hash = "be5145f57fd0f28e39708031f710ec584cf4cc9857bce30d60a55cddbe83b159"
