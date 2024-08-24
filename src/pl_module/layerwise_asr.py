@@ -42,12 +42,10 @@ class LayerwiseASRModule(L.LightningModule):
             filename,
         ) = batch
 
-        max_len = wav.shape[1]
-        padding_mask = torch.arange(max_len).unsqueeze(0).repeat(wav.shape[0], 1)
-        for i in range(wav.shape[0]):
-            data_len = random.randint(max_len // 2, max_len)
-            padding_mask[i] = padding_mask[i] < data_len
-        padding_mask = padding_mask.to(torch.long).cuda()
+        padding_mask = (
+            torch.arange(wav.shape[1]).unsqueeze(0).repeat(wav.shape[0], 1).cuda()
+        )
+        padding_mask = padding_mask < wav_len.unsqueeze(1)
 
         output = self.model(
             x=wav,
@@ -105,12 +103,10 @@ class LayerwiseASRModule(L.LightningModule):
             filename,
         ) = batch
 
-        max_len = wav.shape[1]
-        padding_mask = torch.arange(max_len).unsqueeze(0).repeat(wav.shape[0], 1)
-        for i in range(wav.shape[0]):
-            data_len = random.randint(max_len // 2, max_len)
-            padding_mask[i] = padding_mask[i] < data_len
-        padding_mask = padding_mask.to(torch.long).cuda()
+        padding_mask = (
+            torch.arange(wav.shape[1]).unsqueeze(0).repeat(wav.shape[0], 1).cuda()
+        )
+        padding_mask = padding_mask < wav_len.unsqueeze(1)
 
         output = self.model(
             x=wav,
