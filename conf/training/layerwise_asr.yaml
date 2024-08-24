@@ -1,4 +1,4 @@
-max_epoch: 50
+max_epoch: 20
 batch_size: 32
 num_workers: 4
 input_sec: 10

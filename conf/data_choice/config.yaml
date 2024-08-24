@@ -1,9 +1,7 @@
 kablab:
   use: true
-  # speaker: ["F01_kablab", "M01_kablab", "F02_kablab", "M04_kablab"]
-  # corpus: ["ATR"]
-  speaker: ["F01_kablab", "M01_kablab"]
-  corpus: ["ATR", "BASIC5000", "balanced"]
+  speaker: ["F01_kablab", "M01_kablab", "F02_kablab", "M04_kablab"]
+  corpus: ["ATR"]
 
 jvs:
   use: false
