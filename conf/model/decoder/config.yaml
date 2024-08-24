@@ -7,7 +7,7 @@ conv:
 hubert:
   model_name: rinna/japanese-hubert-base
   encoder_output_dim: 768
-  kmeans: hifi_captain
+  kmeans: kablab
   n_clusters: 200
   ignore_index: 0
   freeze: true

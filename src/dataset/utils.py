@@ -48,3 +48,76 @@ def get_spk_emb_jsut(cfg: omegaconf.DictConfig):
         emb = emb / np.linalg.norm(emb)
         spk_emb_dict[speaker] = emb
     return spk_emb_dict
+
+
+def get_token_index_mapping(cfg):
+    phonemes = [
+        "A",
+        "E",
+        "I",
+        "N",
+        "O",
+        "U",
+        "a",
+        "b",
+        "by",
+        "ch",
+        "cl",
+        "d",
+        "dy",
+        "e",
+        "f",
+        "g",
+        "gy",
+        "h",
+        "hy",
+        "i",
+        "j",
+        "k",
+        "ky",
+        "m",
+        "my",
+        "n",
+        "ny",
+        "o",
+        "p",
+        "py",
+        "r",
+        "ry",
+        "s",
+        "sh",
+        "t",
+        "ts",
+        "ty",
+        "u",
+        "v",
+        "w",
+        "y",
+        "z",
+        "kw",
+        "pau",
+        "sil",
+    ]
+
+    if cfg.training.token_index.for_tts:
+        extra_symbols = [
+            "^",  # 文の先頭を表す特殊記号 <SOS>
+            "$",  # 文の末尾を表す特殊記号 <EOS> (通常)
+            "?",  # 文の末尾を表す特殊記号 <EOS> (疑問系)
+            "_",  # ポーズ
+            "#",  # アクセント句境界
+            "[",  # ピッチの上がり位置
+            "]",  # ピッチの下がり位置
+        ]
+    else:
+        extra_symbols = [
+            "^",  # 文の先頭を表す特殊記号 <SOS>
+            "$",  # 文の末尾を表す特殊記号 <EOS> (通常)
+        ]
+
+    _pad = "~"
+    mask = "mask"
+    token_list = [_pad] + extra_symbols + phonemes + [mask]
+    token_to_id = {s: i for i, s in enumerate(token_list)}
+    id_to_token = {i: s for i, s in enumerate(token_list)}
+    return token_to_id, id_to_token

@@ -1,0 +1,5 @@
+layer_index: 12
+hidden_channels: 768
+lstm_num_layers: 1
+# model_name: "rinna/japanese-hubert-base"
+model_name: "rinna/japanese-wav2vec2-base"

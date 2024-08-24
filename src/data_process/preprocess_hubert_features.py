@@ -241,6 +241,38 @@ def process_save_kmeans(
     return kmeans
 
 
+def save_kmeans_kablab(cfg: omegaconf.DictConfig) -> None:
+    df = pd.read_csv(str(Path(cfg["path"]["kablab"]["df_path"]).expanduser()))
+    df = df.loc[(df["data_split"] == "train") & (df["corpus"] == "ATR")].reset_index(
+        drop=True
+    )
+    hubert_encoder_output_dir = Path(
+        cfg["path"]["kablab"]["hubert_encoder_output_dir"]
+    ).expanduser()
+    hubert_encoder_output_list = []
+    for i, row in tqdm(df.iterrows(), total=len(df)):
+        hubert_encoder_output_path = (
+            hubert_encoder_output_dir / row["speaker"] / f'{row["filename"]}.npy'
+        )
+        if not hubert_encoder_output_path.exists():
+            continue
+        hubert_encoder_output = np.load(str(hubert_encoder_output_path))
+        hubert_encoder_output_list.append(hubert_encoder_output)
+
+    kmeans = process_save_kmeans(
+        cfg=cfg,
+        hubert_encoder_output_list=hubert_encoder_output_list,
+    )
+
+    kmeans_dir = Path(cfg["path"]["kablab"]["hubert_kmeans_dir"]).expanduser()
+    kmeans_path = (
+        kmeans_dir / f"{cfg['model']['decoder']['hubert']['n_clusters']}.pickle"
+    )
+    kmeans_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(str(kmeans_path), "wb") as f:
+        pickle.dump(kmeans, f)
+
+
 def save_kmeans_hifi_captain(cfg: omegaconf.DictConfig) -> None:
     df = pd.read_csv(str(Path(cfg["path"]["hifi_captain"]["df_path"]).expanduser()))
     df = (
@@ -314,7 +346,8 @@ def save_kmeans_jsut(cfg: omegaconf.DictConfig) -> None:
 
 
 def save_kmeans(cfg: omegaconf.DictConfig):
-    save_kmeans_hifi_captain(cfg)
+    save_kmeans_kablab(cfg)
+    # save_kmeans_hifi_captain(cfg)
     # save_kmeans_jsut(cfg)
 
 
@@ -497,8 +530,8 @@ def save_clusters(cfg: omegaconf.DictConfig):
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
     # save_numerical_features(cfg)
-    # save_kmeans(cfg)
-    save_clusters(cfg)
+    save_kmeans(cfg)
+    # save_clusters(cfg)
 
 
 if __name__ == "__main__":

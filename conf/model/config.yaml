@@ -5,6 +5,7 @@ defaults:
   - pwg: base
   - hifigan: base
   - decoder: config
+  - layerwise_asr: config
 
 spk_emb_layer:
   use: true

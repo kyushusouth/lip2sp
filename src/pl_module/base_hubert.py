@@ -1002,8 +1002,6 @@ class LitBaseHuBERTModel(L.LightningModule):
             wer_gt = np.clip(wer(utt, utt_pred), a_min=0, a_max=1)
         except:  # noqa: E722
             wer_gt = 1.0
-        if wer_gt is None:
-            raise ValueError("Word Error Rate was not found.")
         return wer_gt
 
     def configure_optimizers(self):

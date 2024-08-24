@@ -4,6 +4,7 @@ kablab:
   hubert_feature_prj_output_dir: "~/dataset/lip/hubert/feature_prj_output"
   hubert_encoder_output_dir: "~/dataset/lip/hubert/encoder_output"
   hubert_cluster_dir: "~/dataset/lip/hubert/cluster_fix"
+  hubert_kmeans_dir: "~/dataset/lip/hubert/kmeans_fix"
   df_path: "~/dataset/lip/data_split.csv"
   emb_dir: "~/dataset/lip/emb_fix"
   text_dir: "~/dataset/lip/utt"
