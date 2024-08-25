@@ -3,7 +3,7 @@ defaults:
   - model: config
   - path: config
   - data_choice: config
-  - training: layerwise_asr
+  - training: with_speech_ssl_debug
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
 

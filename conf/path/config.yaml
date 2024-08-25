@@ -10,18 +10,50 @@ kablab:
   text_dir: "~/dataset/lip/utt"
   forced_alignment_results_dir: "~/dataset/lip/forced_alignment_results"
   onehot_encoder_dir: "~/dataset/lip/forced_alignment_results/onehot_encoders"
+  hubert:
+    conv_feature_dir: "~/dataset/lip/speech_ssl_features/hubert/conv_features"
+    final_feature_dir: "~/dataset/lip/speech_ssl_features/hubert/final_features"
+    kmeans_dir: "~/dataset/lip/speech_ssl_features/hubert/kmeans" 
+    final_feature_cluster_dir: "~/dataset/lip/speech_ssl_features/hubert/final_feature_clusters"
+  wav2vec2:
+    conv_feature_dir: "~/dataset/lip/speech_ssl_features/wav2vec2/conv_features"
+    final_feature_dir: "~/dataset/lip/speech_ssl_features/wav2vec2/final_features"
+    kmeans_dir: "~/dataset/lip/speech_ssl_features/wav2vec2/kmeans" 
+    final_feature_cluster_dir: "~/dataset/lip/speech_ssl_features/wav2vec2/final_feature_clusters"
+  data2vec:
+    conv_feature_dir: "~/dataset/lip/speech_ssl_features/data2vec-audio/conv_features"
+    final_feature_dir: "~/dataset/lip/speech_ssl_features/data2vec-audio/final_features"
+    kmeans_dir: "~/dataset/lip/speech_ssl_features/data2vec-audio/kmeans" 
+    final_feature_cluster_dir: "~/dataset/lip/speech_ssl_features/data2vec-audio/final_feature_clusters"
 
 jvs:
   audio_dir: "~/dataset/jvs_ver1_cut_silence"
+  video_dir:
   hubert_feature_prj_output_dir: "~/dataset/jvs_ver1_cut_silence/hubert/feature_prj_output"
   hubert_encoder_output_dir: "~/dataset/jvs_ver1_cut_silence/hubert/encoder_output"
   hubert_cluster_dir: "~/dataset/jvs_ver1_cut_silence/hubert/cluster_fix"
   df_path: "~/dataset/jvs_ver1_cut_silence/data_split_fix.csv"
   emb_dir: "~/dataset/jvs_ver1_cut_silence/emb_fix"
   stat_path: "~/dataset/lip/stat/mel/jvs.npz"
+  hubert:
+    conv_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/hubert/conv_features"
+    final_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/hubert/final_features"
+    kmeans_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/hubert/kmeans" 
+    final_feature_cluster_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/hubert/final_feature_clusters"
+  wav2vec2:
+    conv_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/wav2vec2/conv_features"
+    final_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/wav2vec2/final_features"
+    kmeans_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/wav2vec2/kmeans" 
+    final_feature_cluster_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/wav2vec2/final_feature_clusters"
+  data2vec-audio:
+    conv_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/data2vec-audio/conv_features"
+    final_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/data2vec-audio/final_features"
+    kmeans_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/data2vec-audio/kmeans" 
+    final_feature_cluster_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/data2vec-audio/final_feature_clusters"
 
 hifi_captain:
   audio_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP"
+  video_dir:
   hubert_feature_prj_output_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/feature_prj_output"
   hubert_encoder_output_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/encoder_output"
   hubert_cluster_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/hubert/cluster_fix"
@@ -29,6 +61,21 @@ hifi_captain:
   df_path: "~/dataset/hi-fi-captain_cut_silence/ja-JP/data_split.csv"
   emb_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/emb_fix"
   stat_path: "~/dataset/lip/stat/mel/hi-fi-captain.npz"
+  hubert:
+    conv_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/hubert/conv_features"
+    final_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/hubert/final_features"
+    kmeans_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/hubert/kmeans" 
+    final_feature_cluster_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/hubert/final_feature_clusters"
+  wav2vec2:
+    conv_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/wav2vec2/conv_features"
+    final_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/wav2vec2/final_features"
+    kmeans_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/wav2vec2/kmeans" 
+    final_feature_cluster_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/wav2vec2/final_feature_clusters"
+  data2vec-audio:
+    conv_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/data2vec-audio/conv_features"
+    final_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/data2vec-audio/final_features"
+    kmeans_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/data2vec-audio/kmeans" 
+    final_feature_cluster_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/data2vec-audio/final_feature_clusters"
 
 jsut:
   audio_dir: "~/dataset/jsut_ver1.1_cut_silence"

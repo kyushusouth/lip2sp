@@ -28,6 +28,14 @@ def get_upsample_hubert(cfg: omegaconf.DictConfig) -> int:
     return upsample
 
 
+def get_upsample_speech_ssl(cfg: omegaconf.DictConfig) -> int:
+    """
+    動画のfpsと音声SSL特徴量の対応関係を返す
+    """
+    upsample = 50 // cfg.data.video.fps
+    return upsample
+
+
 def wav2mel(
     wav: np.ndarray, cfg: omegaconf.DictConfig, ref_max: bool = False
 ) -> np.ndarray:

@@ -25,11 +25,17 @@ class Preprocessor:
         self.process_model = process_model
         self.debug = debug
 
-        self.model = (
-            AutoModel.from_pretrained(f"rinna/japanese-{process_model}-base")
-            .cuda()
-            .eval()
-        )
+        if process_model == "hubert":
+            self.model = AutoModel.from_pretrained("rinna/japanese-hubert-base")
+        elif process_model == "wav2vec2":
+            self.model = AutoModel.from_pretrained("rinna/japanese-wav2vec2-base")
+        elif process_model == "data2vec":
+            self.model = AutoModel.from_pretrained("rinna/japanese-data2vec-audio-base")
+        else:
+            raise ValueError("model was not found.")
+
+        self.model = self.model.cuda().eval()
+
         self.df = pd.read_csv(str(Path(cfg.path[process_data].df_path).expanduser()))
         self.audio_dir = Path(cfg.path[process_data].audio_dir).expanduser()
         self.conv_feature_dir = Path(
@@ -119,7 +125,7 @@ class Preprocessor:
                 conv_feature = self.model.feature_projection(feature_extractor_output)
 
                 # wav2vec2.0とdata2vec-audioは余分な出力も返るので0番目だけを取得
-                if self.process_model in ["wav2vec2", "data2vec-audio"]:
+                if self.process_model in ["wav2vec2", "data2vec"]:
                     conv_feature = conv_feature[0]
 
                 # 最終出力

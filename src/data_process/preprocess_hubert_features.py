@@ -222,7 +222,7 @@ def save_numerical_features(cfg: omegaconf.DictConfig) -> None:
     save_numerical_features_kablab(cfg, model, debug=False)
     save_numerical_features_hifi_captain(cfg, model, debug=False)
     save_numerical_features_jvs(cfg, model, debug=False)
-    save_numerical_features_jsut(cfg, model, debug=False)
+    # save_numerical_features_jsut(cfg, model, debug=False)
 
 
 def process_save_kmeans(
@@ -529,9 +529,9 @@ def save_clusters(cfg: omegaconf.DictConfig):
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
-    # save_numerical_features(cfg)
+    save_numerical_features(cfg)
     save_kmeans(cfg)
-    # save_clusters(cfg)
+    save_clusters(cfg)
 
 
 if __name__ == "__main__":

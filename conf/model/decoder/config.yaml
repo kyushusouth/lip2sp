@@ -2,15 +2,36 @@ conv:
   n_conv_layers: 2
   conv_kernel_size: 3
   dropout: 0.1
-  freeze: true
+  freeze: false
 
 hubert:
-  model_name: rinna/japanese-hubert-base
+  model_name: "rinna/japanese-hubert-base"
+  encoder_output_dim: 768
+  kmeans: hifi_captain
+  n_clusters: 200
+  ignore_index: 0
+  freeze: false
+  encoder_input_mask:
+    use: false
+    mask_prob: 0.8
+    mask_length: 10
+
+linear:
+  freeze: false
+
+speech_ssl:
+  model_name: "rinna/japanese-hubert-base"
+  # model_name: "rinna/japanese-wav2vec2-base"
+  # model_name: "rinna/japanese-data2vec-audio-base"
+  conv_output_dim: 768
   encoder_output_dim: 768
   kmeans: kablab
   n_clusters: 200
   ignore_index: 0
-  freeze: true
+  freeze: false
+  partial_update:
+    use: false
+    update_layer_index_lower: 9
   encoder_input_mask:
     use: false
     mask_prob: 0.8
