@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import lightning as L
@@ -19,7 +20,9 @@ from src.log_fn.save_loss import save_epoch_loss_plot
 from src.log_fn.save_sample import save_mel
 from src.loss_fn.base import LossFunctions
 from src.model.with_speech_ssl import WithSpeechSSLModel
-from src.pl_module.hifigan import LitHiFiGANModel
+from src.pl_module.hifigan_multiple_ssl import LitHiFiGANMultipltSSLModel
+
+logger = logging.getLogger(__name__)
 
 
 class LitWithSpeechSSLModule(L.LightningModule):
@@ -32,27 +35,34 @@ class LitWithSpeechSSLModule(L.LightningModule):
         self.model = WithSpeechSSLModel(cfg)
 
         if cfg.model.avhubert.freeze:
+            logger.info("freeze avhubert parameters.")
             for param in self.model.avhubert.parameters():
                 param.requires_grad = False
 
         if cfg.model.spk_emb_layer.freeze:
+            logger.info("freeze spk_emb_layer parameters.")
             for param in self.model.spk_emb_layer.parameters():
                 param.requires_grad = False
 
         if cfg.model.decoder.conv.freeze:
+            logger.info("freeze mel_decoder parameters.")
             for param in self.model.mel_decoder.parameters():
                 param.requires_grad = False
 
         if cfg.model.decoder.linear.freeze:
+            logger.info("freeze ssl_feature_cluster_decoder_linear parameters.")
             for param in self.model.ssl_feature_cluster_decoder_linear.parameters():
                 param.requires_grad = False
 
         if cfg.model.decoder.speech_ssl.freeze:
+            logger.info("freeze ssl_feature_cluster_decoder_ssl parameters.")
             for param in self.model.ssl_feature_cluster_decoder_ssl.parameters():
                 param.requires_grad = False
 
-        if cfg.model.decoder.speech_ssl.partial_update.use:
-            print("--- Freeze Some Speech SSL Layers for Partial Update ---")
+        if (
+            not cfg.model.decoder.speech_ssl.freeze
+        ) and cfg.model.decoder.speech_ssl.partial_update.use:
+            logger.info("Freeze Some Speech SSL Layers for Partial Update")
             for layer_index, layer in enumerate(
                 self.model.ssl_feature_cluster_decoder_ssl.ssl_model_encoder.layers
             ):
@@ -60,7 +70,7 @@ class LitWithSpeechSSLModule(L.LightningModule):
                     layer_index
                     < self.cfg.model.decoder.speech_ssl.partial_update.update_layer_index_lower
                 ):
-                    print(f"freeze: {layer_index}")
+                    logger.info(f"freeze: {layer_index}")
                     for param in layer.parameters():
                         param.requires_grad = False
 
@@ -120,6 +130,7 @@ class LitWithSpeechSSLModule(L.LightningModule):
         padding_mask_lip = (padding_mask_lip >= lip_len.unsqueeze(1)).to(
             dtype=torch.bool
         )
+        padding_mask_lip_inverse = ~padding_mask_lip
         padding_mask_feature = padding_mask_lip.repeat_interleave(
             repeats=get_upsample(self.cfg), dim=1
         )
@@ -137,7 +148,7 @@ class LitWithSpeechSSLModule(L.LightningModule):
             audio=None,
             spk_emb=spk_emb,
             padding_mask_lip=padding_mask_lip,
-            padding_mask_feature=padding_mask_lip,
+            padding_mask_feature=padding_mask_lip_inverse,
         )
 
         mel_loss = self.loss_fn.l1_loss(
@@ -607,7 +618,7 @@ class LitWithSpeechSSLModule(L.LightningModule):
     def on_test_start(self) -> None:
         self.model.eval()
 
-        self.hifigan = LitHiFiGANModel.load_from_checkpoint(
+        self.hifigan = LitHiFiGANMultipltSSLModel.load_from_checkpoint(
             self.cfg.model.hifigan.model_path,
             cfg=self.cfg,
         )
