@@ -80,12 +80,13 @@ def main(cfg: omegaconf.DictConfig) -> None:
         num_sanity_val_steps=0,
     )
 
-    trainer.fit(model=model, datamodule=datamodule)
+    # trainer.fit(model=model, datamodule=datamodule)
 
     trainer.test(
         model=model,
         datamodule=datamodule,
-        ckpt_path="best",
+        # ckpt_path="best",
+        ckpt_path=None,
     )
 
     rename_checkpoint_file(cfg.training.checkpoints_save_dir)
