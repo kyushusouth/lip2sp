@@ -1,4 +1,5 @@
 import itertools
+import logging
 
 import librosa
 import lightning as L
@@ -15,6 +16,8 @@ from src.model.hifigan_multiplt_ssl import (
     MultiScaleDiscriminator,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class LitHiFiGANMultipltSSLModel(L.LightningModule):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
@@ -28,6 +31,7 @@ class LitHiFiGANMultipltSSLModel(L.LightningModule):
         self.msd = MultiScaleDiscriminator()
 
         if cfg.model.hifigan.freeze:
+            logger.info("freeze hifigan parameters.")
             for param in self.gen.parameters():
                 param.requires_grad = False
             for param in self.mpd.parameters():
@@ -182,7 +186,7 @@ class LitHiFiGANMultipltSSLModel(L.LightningModule):
         hubert_final_feature_cluster: torch.Tensor | None,
         wav2vec2_final_feature_cluster: torch.Tensor | None,
         data2vec_final_feature_cluster: torch.Tensor | None,
-    ) -> dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor | None]:
         """
         args:
             mel: (B, C, T)

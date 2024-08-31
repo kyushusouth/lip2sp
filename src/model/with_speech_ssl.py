@@ -1,3 +1,5 @@
+import logging
+
 import omegaconf
 import torch
 import torch.nn as nn
@@ -5,6 +7,9 @@ from transformers import AutoModel
 
 from src.data_process.utils import get_upsample, get_upsample_speech_ssl
 from src.model.utils import load_avhubert
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class ConvDecoder(nn.Module):
@@ -54,12 +59,14 @@ class ConvDecoder(nn.Module):
         return:
             output: (B, C, T)
         """
-        feature = feature.permute(0, 2, 1)
+        feature = feature.permute(0, 2, 1)  # (B, C, T)
         for layer in self.layers:
             feature = layer(feature)
-        feature = feature.permute(0, 2, 1)
+        feature = feature.permute(0, 2, 1)  # (B, T, C)
         output = self.out_layer(feature)
-        output = output.reshape(output.shape[0], -1, self.out_channels).permute(0, 2, 1)
+        output = output.reshape(output.shape[0], -1, self.out_channels).permute(
+            0, 2, 1
+        )  # (B, C, T)
         return output
 
 
@@ -68,11 +75,12 @@ class SSLModelDecoder(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.ssl_model_encoder = AutoModel.from_pretrained(
-            cfg.model.decoder.hubert.model_name
+            cfg.model.decoder.speech_ssl.model_name
         ).encoder
         self.out_layer = nn.Linear(
             hidden_channels,
-            (cfg.model.decoder.hubert.n_clusters + 1) * get_upsample_speech_ssl(cfg),
+            (cfg.model.decoder.speech_ssl.n_clusters + 1)
+            * get_upsample_speech_ssl(cfg),
         )
 
     def forward(self, feature: torch.Tensor, padding_mask: torch.Tensor):
@@ -82,7 +90,7 @@ class SSLModelDecoder(nn.Module):
             padding_mask: (B, T)
                 パディング部をFalseとするbool型
         returns:
-            output: (B, C, T)
+            output: (B, T, C)
         """
         feature = self.ssl_model_encoder(
             hidden_states=feature,
@@ -90,14 +98,8 @@ class SSLModelDecoder(nn.Module):
             output_attentions=False,
             output_hidden_states=False,
             return_dict=True,
-        ).last_hidden_state
+        ).last_hidden_state  # (B, T, C)
         output = self.out_layer(feature)
-        output = output.reshape(
-            output.shape[0],
-            -1,
-            self.cfg.model.decoder.hubert.n_clusters + 1,
-        )
-        output = output.permute(0, 2, 1)
         return output
 
 
@@ -121,7 +123,8 @@ class WithSpeechSSLModel(nn.Module):
         )
         self.ssl_feature_cluster_decoder_linear = nn.Linear(
             hidden_channels,
-            (cfg.model.decoder.hubert.n_clusters + 1) * get_upsample_speech_ssl(cfg),
+            (cfg.model.decoder.speech_ssl.n_clusters + 1)
+            * get_upsample_speech_ssl(cfg),
         )
         self.ssl_feature_cluster_decoder_ssl = SSLModelDecoder(cfg, hidden_channels)
 
@@ -147,6 +150,17 @@ class WithSpeechSSLModel(nn.Module):
         )
         return x
 
+    def transform_for_output(self, x: torch.Tensor, out_dim: int) -> torch.Tensor:
+        """
+        args:
+            x: (B, T, C)
+        return:
+            x: (B, C, T)
+        """
+        x = x.reshape(x.shape[0], -1, out_dim)
+        x = x.permute(0, 2, 1)
+        return x
+
     def forward(
         self,
         lip: torch.Tensor,
@@ -165,31 +179,45 @@ class WithSpeechSSLModel(nn.Module):
             pred_*: (B, C, T)
         """
         lip = lip.permute(0, 1, 4, 2, 3)  # (B, C, T, H, W)
+        logger.debug(f"{lip.shape}=")
         feature = self.extract_feature_avhubert(lip, padding_mask_lip, audio)
+        logger.debug(f"{feature.shape}=")
 
         if self.cfg.model.spk_emb_layer.use:
             spk_emb = spk_emb.unsqueeze(1).expand(-1, feature.shape[1], -1)  # (B, T, C)
+            logger.debug(f"{spk_emb.shape=}")
             feature_with_spk_emb = torch.cat([feature, spk_emb], dim=-1)
+            logger.debug(f"{feature_with_spk_emb.shape=}")
             feature_with_spk_emb = self.spk_emb_layer(feature_with_spk_emb)
+            logger.debug(f"{feature_with_spk_emb.shape=}")
 
-        pred_mel = self.mel_decoder(feature_with_spk_emb)
-        pred_ssl_conv_feature = self.ssl_conv_feature_decoder(feature_with_spk_emb)
+        if self.cfg.model.spk_emb_layer.use:
+            pred_mel = self.mel_decoder(feature_with_spk_emb)
+            pred_ssl_conv_feature = self.ssl_conv_feature_decoder(feature_with_spk_emb)
+        else:
+            pred_mel = self.mel_decoder(feature)
+            pred_ssl_conv_feature = self.ssl_conv_feature_decoder(feature)
+
+        logger.debug(f"{pred_mel.shape=}")
+        logger.debug(f"{pred_ssl_conv_feature.shape=}")
 
         pred_ssl_feature_cluster_linear = self.ssl_feature_cluster_decoder_linear(
             feature
         )
-        pred_ssl_feature_cluster_linear = pred_ssl_feature_cluster_linear.reshape(
-            pred_ssl_feature_cluster_linear.shape[0],
-            -1,
-            self.cfg.model.decoder.hubert.n_clusters + 1,
+        pred_ssl_feature_cluster_linear = self.transform_for_output(
+            pred_ssl_feature_cluster_linear,
+            self.cfg.model.decoder.speech_ssl.n_clusters + 1,
         )
-        pred_ssl_feature_cluster_linear = pred_ssl_feature_cluster_linear.permute(
-            0, 2, 1
-        )
+        logger.debug(f"{pred_ssl_feature_cluster_linear.shape=}")
 
         pred_ssl_feature_cluster_ssl = self.ssl_feature_cluster_decoder_ssl(
             feature, padding_mask_feature
         )
+        pred_ssl_feature_cluster_ssl = self.transform_for_output(
+            pred_ssl_feature_cluster_ssl,
+            self.cfg.model.decoder.speech_ssl.n_clusters + 1,
+        )
+        logger.debug(f"{pred_ssl_feature_cluster_ssl.shape=}")
 
         return (
             pred_mel,

@@ -1,4 +1,6 @@
 import functools
+import logging
+import logging.config
 from pathlib import Path
 
 import lightning as L
@@ -9,6 +11,8 @@ from torch.utils.data import DataLoader
 from src.collate_fn.with_speech_ssl import adjust_seq_lengths
 from src.dataset.with_speech_ssl import WithSpeechSSLDataset
 from src.transform.with_speech_ssl import WithSpeechSSLTransform
+
+logger = logging.getLogger(__name__)
 
 
 class WithSpeechSSLDataModule(L.LightningDataModule):
@@ -45,7 +49,10 @@ class WithSpeechSSLDataModule(L.LightningDataModule):
     ) -> list[dict[str, Path]]:
         df = df.loc[df["data_split"] == data_split]
         audio_dir = Path(self.cfg.path[process_data].audio_dir).expanduser()
-        video_dir = Path(self.cfg.path[process_data].video_dir).expanduser()
+        if process_data == "kablab":
+            video_dir = Path(self.cfg.path[process_data].video_dir).expanduser()
+        else:
+            video_dir = None
         hubert_conv_feature_dir = Path(
             self.cfg.path[process_data].hubert.conv_feature_dir
         ).expanduser()
@@ -156,6 +163,7 @@ class WithSpeechSSLDataModule(L.LightningDataModule):
         return data_path_list
 
     def setup(self, stage: str) -> None:
+        logger.info("setup")
         train_data_path_list = []
         val_data_path_list = []
         test_data_path_list = []
@@ -166,17 +174,35 @@ class WithSpeechSSLDataModule(L.LightningDataModule):
             train_data_path_list += self.get_path_list(df, "kablab", "train")
             val_data_path_list += self.get_path_list(df, "kablab", "val")
             test_data_path_list += self.get_path_list(df, "kablab", "test")
+            logger.info(
+                f"""
+                use kablab
+                {len(train_data_path_list)=}, {len(val_data_path_list)=}, {len(test_data_path_list)=}
+                """
+            )
         if self.cfg.data_choice.hifi_captain.use:
             df = pd.read_csv(str(Path(self.cfg.path.hifi_captain.df_path).expanduser()))
             train_data_path_list += self.get_path_list(df, "hifi_captain", "train")
             val_data_path_list += self.get_path_list(df, "hifi_captain", "val")
             test_data_path_list += self.get_path_list(df, "hifi_captain", "test")
+            logger.info(
+                f"""
+                use hifi-captain
+                {len(train_data_path_list)=}, {len(val_data_path_list)=}, {len(test_data_path_list)=}
+                """
+            )
         if self.cfg.data_choice.jvs.use:
             df = pd.read_csv(str(Path(self.cfg.path.jvs.df_path).expanduser()))
             df = df.loc[(df["data"] == "parallel100") | (df["data"] == "nonpara30")]
             train_data_path_list += self.get_path_list(df, "jvs", "train")
             val_data_path_list += self.get_path_list(df, "jvs", "val")
             test_data_path_list += self.get_path_list(df, "jvs", "test")
+            logger.info(
+                f"""
+                use jvs
+                {len(train_data_path_list)=}, {len(val_data_path_list)=}, {len(test_data_path_list)=}
+                """
+            )
 
         if stage == "fit":
             self.train_dataset = WithSpeechSSLDataset(
