@@ -45,7 +45,7 @@ jvs:
     final_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/wav2vec2/final_features"
     kmeans_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/wav2vec2/kmeans" 
     final_feature_cluster_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/wav2vec2/final_feature_clusters"
-  data2vec-audio:
+  data2vec:
     conv_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/data2vec-audio/conv_features"
     final_feature_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/data2vec-audio/final_features"
     kmeans_dir: "~/dataset/jvs_ver1_cut_silence/speech_ssl_features/data2vec-audio/kmeans" 
@@ -71,7 +71,7 @@ hifi_captain:
     final_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/wav2vec2/final_features"
     kmeans_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/wav2vec2/kmeans" 
     final_feature_cluster_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/wav2vec2/final_feature_clusters"
-  data2vec-audio:
+  data2vec:
     conv_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/data2vec-audio/conv_features"
     final_feature_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/data2vec-audio/final_features"
     kmeans_dir: "~/dataset/hi-fi-captain_cut_silence/ja-JP/speech_ssl_features/data2vec-audio/kmeans" 

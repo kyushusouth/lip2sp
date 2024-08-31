@@ -1,5 +1,5 @@
 conv:
-  n_conv_layers: 2
+  n_conv_layers: 3
   conv_kernel_size: 3
   dropout: 0.1
   freeze: false
@@ -30,7 +30,7 @@ speech_ssl:
   ignore_index: 0
   freeze: false
   partial_update:
-    use: false
+    use: true
     update_layer_index_lower: 9
   encoder_input_mask:
     use: false
