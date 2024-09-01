@@ -229,7 +229,7 @@ class WithSpeechSSLDataModule(L.LightningDataModule):
             num_workers=self.cfg.training.num_workers,
             shuffle=True,
             pin_memory=True,
-            drop_last=False,
+            drop_last=True,
             collate_fn=functools.partial(adjust_seq_lengths, cfg=self.cfg),
         )
 
@@ -240,7 +240,7 @@ class WithSpeechSSLDataModule(L.LightningDataModule):
             num_workers=self.cfg.training.num_workers,
             shuffle=False,
             pin_memory=True,
-            drop_last=False,
+            drop_last=True,
             collate_fn=functools.partial(adjust_seq_lengths, cfg=self.cfg),
         )
 

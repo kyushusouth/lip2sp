@@ -213,6 +213,9 @@ class WithSpeechSSLDataset(Dataset):
             lip_std=self.lip_std,
         )
 
+        lip = lip.to(torch.float32)
+        feature = feature.to(torch.float32)
+
         feature_len = torch.tensor(feature.shape[-1]).to(torch.int)
         feature_ssl_len = torch.tensor(hubert_conv_feature.shape[-1]).to(torch.int)
         lip_len = torch.tensor(lip.shape[-1]).to(torch.int)
