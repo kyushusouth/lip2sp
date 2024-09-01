@@ -1,6 +1,7 @@
 import itertools
 import logging
 import random
+import subprocess
 from pathlib import Path
 
 import librosa
@@ -1072,40 +1073,6 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
         wer_abs = self.calc_error_rate(utt_parse, utt_recog_abs_parse)
         wer_pred = self.calc_error_rate(utt_parse, utt_recog_pred_parse)
 
-        data = [
-            [
-                speaker[0],
-                filename[0],
-                "gt",
-                wandb.Audio(wav_gt.cpu(), sample_rate=self.cfg.data.audio.sr),
-                None,
-                None,
-                None,
-                wer_gt,
-            ],
-            [
-                speaker[0],
-                filename[0],
-                "abs",
-                wandb.Audio(wav_abs.cpu(), sample_rate=self.cfg.data.audio.sr),
-                pesq_abs,
-                stoi_abs,
-                estoi_abs,
-                wer_abs,
-            ],
-            [
-                speaker[0],
-                filename[0],
-                "pred",
-                wandb.Audio(wav_pred.cpu(), sample_rate=self.cfg.data.audio.sr),
-                pesq_pred,
-                stoi_pred,
-                estoi_pred,
-                wer_pred,
-            ],
-        ]
-        self.test_data_list += data
-
         save_dir = (
             Path(
                 str(Path(self.cfg.training.checkpoints_save_dir)).replace(
@@ -1132,6 +1099,47 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
             data=wav_pred.cpu().numpy(),
         )
 
+        utmos_gt = self.calc_utmos(str(save_dir / "gt.wav"))
+        utmos_abs = self.calc_utmos(str(save_dir / "abs.wav"))
+        utmos_pred = self.calc_utmos(str(save_dir / "pred.wav"))
+
+        data = [
+            [
+                speaker[0],
+                filename[0],
+                "gt",
+                wandb.Audio(wav_gt.cpu(), sample_rate=self.cfg.data.audio.sr),
+                None,
+                None,
+                None,
+                wer_gt,
+                utmos_gt,
+            ],
+            [
+                speaker[0],
+                filename[0],
+                "abs",
+                wandb.Audio(wav_abs.cpu(), sample_rate=self.cfg.data.audio.sr),
+                pesq_abs,
+                stoi_abs,
+                estoi_abs,
+                wer_abs,
+                utmos_abs,
+            ],
+            [
+                speaker[0],
+                filename[0],
+                "pred",
+                wandb.Audio(wav_pred.cpu(), sample_rate=self.cfg.data.audio.sr),
+                pesq_pred,
+                stoi_pred,
+                estoi_pred,
+                wer_pred,
+                utmos_pred,
+            ],
+        ]
+        self.test_data_list += data
+
     def on_test_start(self) -> None:
         self.test_data_columns = [
             "speaker",
@@ -1142,6 +1150,7 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
             "stoi",
             "estoi",
             "wer",
+            "utmos",
         ]
         self.test_data_list = []
 
@@ -1171,11 +1180,12 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
         stoi_index = self.test_data_columns.index("stoi")
         estoi_index = self.test_data_columns.index("estoi")
         wer_index = self.test_data_columns.index("wer")
+        utmos_index = self.test_data_columns.index("utmos")
 
         result: dict[str, dict[str, list]] = {
-            "gt": {"pesq": [], "stoi": [], "estoi": [], "wer": []},
-            "abs": {"pesq": [], "stoi": [], "estoi": [], "wer": []},
-            "pred": {"pesq": [], "stoi": [], "estoi": [], "wer": []},
+            "gt": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
+            "abs": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
+            "pred": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
         }
 
         for test_data in self.test_data_list:
@@ -1184,12 +1194,14 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
             stoi = test_data[stoi_index]
             estoi = test_data[estoi_index]
             wer = test_data[wer_index]
+            utmos = test_data[utmos_index]
             result[kind]["pesq"].append(pesq)
             result[kind]["stoi"].append(stoi)
             result[kind]["estoi"].append(estoi)
             result[kind]["wer"].append(wer)
+            result[kind]["utmos"].append(utmos)
 
-        columns = ["kind", "pesq", "stoi", "estoi", "wer"]
+        columns = ["kind", "pesq", "stoi", "estoi", "wer", "utmos"]
         data_list = []
         for kind, value_dict in result.items():
             if kind == "gt":
@@ -1200,6 +1212,7 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
                         None,
                         None,
                         np.mean(value_dict["wer"]),
+                        np.mean(value_dict["utmos"]),
                     ]
                 )
             else:
@@ -1210,21 +1223,11 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
                         np.mean(value_dict["stoi"]),
                         np.mean(value_dict["estoi"]),
                         np.mean(value_dict["wer"]),
+                        np.mean(value_dict["utmos"]),
                     ]
                 )
         table = wandb.Table(columns=columns, data=data_list)
         wandb.log({"metrics_mean": table})
-
-        del (
-            self.test_data_columns,
-            self.test_data_list,
-            self.df_utt,
-            self.wb_pesq_evaluator,
-            self.stoi_evaluator,
-            self.estoi_evaluator,
-            self.speech_recognizer,
-            self.mecab,
-        )
 
     def process_wav(self, wav: torch.Tensor, n_sample: int) -> torch.Tensor:
         wav = wav.to(torch.float32)
@@ -1240,3 +1243,21 @@ class LitHiFiGANMultipltSSLModelFineTuning(LitHiFiGANMultipltSSLModel):
         except:  # noqa: E722
             wer_gt = 1.0
         return wer_gt
+
+    def calc_utmos(self, path: str) -> float:
+        utmos = subprocess.run(
+            [
+                "/home/minami/UTMOS-demo/.venv/bin/python",
+                "/home/minami/UTMOS-demo/predict.py",
+                "--ckpt_path",
+                "/home/minami/UTMOS-demo/epoch=3-step=7459.ckpt",
+                "--mode",
+                "predict_file",
+                "--inp_path",
+                path,
+            ],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        utmos = float(utmos)
+        return utmos
