@@ -16,21 +16,15 @@ precision: "16-mixed"
 accumulate_grad_batches: 8
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
-checkpoints_save_dir: "~/lip2sp/checkpoints/base_hubert"
+checkpoints_save_dir: "~/lip2sp/checkpoints/with_speech_ssl"
 finetune: false
 finetune_start_model_path:
 loss_weights:
-  conv_output_mel_loss: 1.0
-  conv_output_hubert_encoder_loss: 0.0
-  conv_output_hubert_cluster_loss: 0.0
-  conv_output_hubert_prj_loss: 1.0
-  hubert_output_reg_masked_loss: 1.0
-  hubert_output_reg_unmasked_loss: 0.0
-  hubert_output_reg_loss: 1.0
-  hubert_output_cls_masked_loss: 1.0
-  hubert_output_cls_unmasked_loss: 0.0
-  hubert_output_cls_loss: 1.0
-  hubert_output_mel_loss: 0.0
+  mel_loss: 1.0
+  ssl_conv_feature_loss: 1.0
+  ssl_feature_cluster_linear_loss: 1.0
+  ssl_feature_cluster_ssl_loss: 1.0
+  ssl_feature_cluster_ensemble_loss: 1.0
 optimizer:
   learning_rate: 1.0e-3
   beta_1: 0.9
@@ -42,7 +36,7 @@ scheduler:
   warmup_steps: 0.1
   gamma: 1.0
 wandb:
-  project_name: "lip2sp-base_hubert"
+  project_name: "lip2sp-with_speech_ssl"
   default_root_dir: "./"
   run_name:
   group_name:
@@ -63,12 +57,3 @@ augs:
     ratio_min: 0.3
     ratio_max: 3.3
     value: 0
-  add_gaussian_noise:
-    use: false
-    kernel_size: 9
-    sigma_min: 0.1
-    sigma_max: 1.0
-  spec_gaussian_blur:
-    use: false
-    snr_min: 10
-    snr_max: 60
