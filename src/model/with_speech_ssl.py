@@ -103,6 +103,49 @@ class SSLModelDecoder(nn.Module):
         return output
 
 
+class EnsembleDecoder(nn.Module):
+    def __init__(self, cfg: omegaconf.DictConfig, hidden_channels: int) -> None:
+        super().__init__()
+        self.cfg = cfg
+        self.first_layer = nn.Linear(
+            (cfg.model.decoder.speech_ssl.n_clusters + 1)
+            * get_upsample_speech_ssl(cfg)
+            * 2,
+            hidden_channels,
+        )
+
+        self.hidden_layers = []
+        for i in range(cfg.model.decoder.ensemble.n_hidden_layers):
+            self.hidden_layers.append(
+                nn.Sequential(
+                    nn.Linear(hidden_channels, hidden_channels),
+                    nn.LayerNorm(hidden_channels),
+                    nn.ReLU(),
+                    nn.Dropout(cfg.model.decoder.ensemble.dropout),
+                )
+            )
+        self.hidden_layers = nn.ModuleList(self.hidden_layers)
+
+        self.out_layer = nn.Linear(
+            hidden_channels,
+            (cfg.model.decoder.speech_ssl.n_clusters + 1)
+            * get_upsample_speech_ssl(cfg),
+        )
+
+    def forward(self, x):
+        """
+        args:
+            x: (B, T, C)
+        returns:
+            x: (B, T, C)
+        """
+        x = self.first_layer(x)
+        for layer in self.hidden_layers:
+            x = layer(x)
+        x = self.out_layer(x)
+        return x
+
+
 class WithSpeechSSLModel(nn.Module):
     def __init__(self, cfg: omegaconf.DictConfig) -> None:
         super().__init__()
@@ -127,6 +170,9 @@ class WithSpeechSSLModel(nn.Module):
             * get_upsample_speech_ssl(cfg),
         )
         self.ssl_feature_cluster_decoder_ssl = SSLModelDecoder(cfg, hidden_channels)
+        self.ssl_feature_cluster_decoder_ensemble = EnsembleDecoder(
+            cfg, hidden_channels
+        )
 
     def extract_feature_avhubert(
         self,
@@ -179,17 +225,12 @@ class WithSpeechSSLModel(nn.Module):
             pred_*: (B, C, T)
         """
         lip = lip.permute(0, 1, 4, 2, 3)  # (B, C, T, H, W)
-        logger.debug(f"{lip.shape}=")
         feature = self.extract_feature_avhubert(lip, padding_mask_lip, audio)
-        logger.debug(f"{feature.shape}=")
 
         if self.cfg.model.spk_emb_layer.use:
             spk_emb = spk_emb.unsqueeze(1).expand(-1, feature.shape[1], -1)  # (B, T, C)
-            logger.debug(f"{spk_emb.shape=}")
             feature_with_spk_emb = torch.cat([feature, spk_emb], dim=-1)
-            logger.debug(f"{feature_with_spk_emb.shape=}")
             feature_with_spk_emb = self.spk_emb_layer(feature_with_spk_emb)
-            logger.debug(f"{feature_with_spk_emb.shape=}")
 
         if self.cfg.model.spk_emb_layer.use:
             pred_mel = self.mel_decoder(feature_with_spk_emb)
@@ -198,30 +239,35 @@ class WithSpeechSSLModel(nn.Module):
             pred_mel = self.mel_decoder(feature)
             pred_ssl_conv_feature = self.ssl_conv_feature_decoder(feature)
 
-        logger.debug(f"{pred_mel.shape=}")
-        logger.debug(f"{pred_ssl_conv_feature.shape=}")
-
         pred_ssl_feature_cluster_linear = self.ssl_feature_cluster_decoder_linear(
             feature
         )
+        pred_ssl_feature_cluster_ssl = self.ssl_feature_cluster_decoder_ssl(
+            feature, padding_mask_feature
+        )
+        pred_ssl_feature_cluster_ensemble = self.ssl_feature_cluster_decoder_ensemble(
+            torch.cat(
+                [pred_ssl_feature_cluster_linear, pred_ssl_feature_cluster_ssl], dim=2
+            )
+        )
+
         pred_ssl_feature_cluster_linear = self.transform_for_output(
             pred_ssl_feature_cluster_linear,
             self.cfg.model.decoder.speech_ssl.n_clusters + 1,
-        )
-        logger.debug(f"{pred_ssl_feature_cluster_linear.shape=}")
-
-        pred_ssl_feature_cluster_ssl = self.ssl_feature_cluster_decoder_ssl(
-            feature, padding_mask_feature
         )
         pred_ssl_feature_cluster_ssl = self.transform_for_output(
             pred_ssl_feature_cluster_ssl,
             self.cfg.model.decoder.speech_ssl.n_clusters + 1,
         )
-        logger.debug(f"{pred_ssl_feature_cluster_ssl.shape=}")
+        pred_ssl_feature_cluster_ensemble = self.transform_for_output(
+            pred_ssl_feature_cluster_ensemble,
+            self.cfg.model.decoder.speech_ssl.n_clusters + 1,
+        )
 
         return (
             pred_mel,
             pred_ssl_conv_feature,
             pred_ssl_feature_cluster_linear,
             pred_ssl_feature_cluster_ssl,
+            pred_ssl_feature_cluster_ensemble,
         )
