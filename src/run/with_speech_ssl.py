@@ -1,7 +1,23 @@
 import subprocess
+import time
 from pathlib import Path
 
 from src.run.utils import get_last_checkpoint_path
+
+
+def run_with_retry(command: list[str], max_retries: int = 10):
+    count = 0
+    while count < max_retries:
+        try:
+            subprocess.run(
+                command + [f"training.wandb.group_name=retry_{count}"],
+                check=True,
+            )
+            break
+        except subprocess.CalledProcessError as e:
+            print(f"An error occurred: {e}. Retrying... ({count + 1}/{max_retries})")
+            count += 1
+            time.sleep(5)
 
 
 def run_hifigan(
@@ -9,7 +25,7 @@ def run_hifigan(
     hifigan_input: str,
     debug: bool,
 ) -> str:
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/hifigan_multiple_ssl.py",
@@ -28,7 +44,7 @@ def run_hifigan(
     hifigan_checkpoint_path_hificaptain = str(
         get_last_checkpoint_path(hifigan_checkpoint_dir)
     )
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/hifigan_multiple_ssl.py",
@@ -55,7 +71,7 @@ def run_avhubert(
     hifigan_checkpoint_path_jvs: str,
     debug: bool,
 ) -> str:
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/with_speech_ssl.py",
@@ -82,7 +98,7 @@ def run_avhubert(
         ]
     )
     avhubert_checkpoint_path = str(get_last_checkpoint_path(lip2sp_checkpoint_dir))
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/hifigan_multiple_ssl_finetuning.py",
@@ -121,7 +137,7 @@ def run_speech_ssl(
     hifigan_checkpoint_path_jvs: str,
     debug: bool,
 ) -> str:
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/with_speech_ssl.py",
@@ -155,7 +171,7 @@ def run_speech_ssl(
     lip2sp_with_speech_ssl_checkpoint_path = str(
         get_last_checkpoint_path(lip2sp_checkpoint_dir)
     )
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/hifigan_multiple_ssl_finetuning.py",
@@ -192,7 +208,7 @@ def run_ensemble(
     hifigan_checkpoint_path_jvs: str,
     debug: bool,
 ) -> None:
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/with_speech_ssl.py",
@@ -212,7 +228,7 @@ def run_ensemble(
             f"model.decoder.speech_ssl.n_clusters={speech_ssl_n_clusters}",
             "model.decoder.speech_ssl.partial_update.use=false",
             "model.decoder.speech_ssl.partial_update.lower_limit_index=0",
-            "model.decoder.vocoder_input_cluster=speech_ssl",
+            "model.decoder.vocoder_input_cluster=ensemble",
             "training=with_speech_ssl_debug" if debug else "training=with_speech_ssl",
             "training.loss_weights.mel_loss=0.0",
             "training.loss_weights.ssl_conv_feature_loss=0.0",
@@ -226,7 +242,7 @@ def run_ensemble(
     lip2sp_with_speech_ssl_ensemble_checkpoint_path = str(
         get_last_checkpoint_path(lip2sp_checkpoint_dir)
     )
-    subprocess.run(
+    run_with_retry(
         [
             "python",
             "/home/minami/lip2sp/src/main/hifigan_multiple_ssl_finetuning.py",
@@ -234,7 +250,6 @@ def run_ensemble(
             "data_choice.jvs.use=false",
             "data_choice.hifi_captain.use=false",
             "data_choice.jsut.use=false",
-            f"model.hifigan.input={hifigan_input}",
             "model.hifigan.freeze=false",
             "model.avhubert.freeze=true",
             "model.spk_emb_layer.freeze=true",
@@ -254,93 +269,104 @@ def run_ensemble(
 
 
 def main():
-    hifigan_checkpoint_dir = Path(
-        "~/lip2sp/checkpoints/debug_hifigan_multiple_ssl"
-    ).expanduser()
+    debug = True
+    if debug:
+        hifigan_checkpoint_dir = Path(
+            "~/lip2sp/checkpoints/debug_hifigan_multiple_ssl"
+        ).expanduser()
+        lip2sp_checkpoint_dir = Path(
+            "~/lip2sp/checkpoints/debug_with_speech_ssl"
+        ).expanduser()
+    else:
+        hifigan_checkpoint_dir = Path(
+            "~/lip2sp/checkpoints/hifigan_multiple_ssl"
+        ).expanduser()
+        lip2sp_checkpoint_dir = Path(
+            "~/lip2sp/checkpoints/with_speech_ssl"
+        ).expanduser()
 
-    lip2sp_checkpoint_dir = Path(
-        "~/lip2sp/checkpoints/debug_with_speech_ssl"
-    ).expanduser()
-
-    debug = False
-    hifigan_input = "hubert_final_feature_cluster"
+    hifigan_input_lst = [
+        ["hubert_final_feature_cluster"],
+        ["mel", "hubert_final_feature_cluster"],
+    ]
     speech_ssl_model_name = "rinna/japanese-hubert-base"
     speech_ssl_n_clusters = 200
 
-    hifigan_checkpoint_path_jvs = run_hifigan(
-        hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-        hifigan_input=hifigan_input,
-        debug=debug,
-    )
-    avhubert_checkpoint_path = run_avhubert(
-        hifigan_input=hifigan_input,
-        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-        hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
-        debug=debug,
-    )
+    for hifigan_input in hifigan_input_lst:
+        hifigan_checkpoint_path_jvs = run_hifigan(
+            hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+            hifigan_input=hifigan_input,
+            debug=debug,
+        )
+        avhubert_checkpoint_path = run_avhubert(
+            hifigan_input=hifigan_input,
+            lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+            hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
+            debug=debug,
+        )
 
-    lip2sp_with_speech_ssl_checkpoint_path = run_speech_ssl(
-        hifigan_input=hifigan_input,
-        speech_ssl_model_name=speech_ssl_model_name,
-        speech_ssl_n_clusters=speech_ssl_n_clusters,
-        speech_ssl_partial_update_use=False,
-        speech_ssl_partial_update_lower_limit_index=0,
-        avhubert_checkpoint_path=avhubert_checkpoint_path,
-        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-        hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
-        debug=debug,
-    )
-    run_ensemble(
-        hifigan_input=hifigan_input,
-        speech_ssl_model_name=speech_ssl_model_name,
-        speech_ssl_n_clusters=speech_ssl_n_clusters,
-        lip2sp_with_speech_ssl_checkpoint_path=lip2sp_with_speech_ssl_checkpoint_path,
-        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-        hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
-        debug=debug,
-    )
+        lip2sp_with_speech_ssl_checkpoint_path = run_speech_ssl(
+            hifigan_input=hifigan_input,
+            speech_ssl_model_name=speech_ssl_model_name,
+            speech_ssl_n_clusters=speech_ssl_n_clusters,
+            speech_ssl_partial_update_use=False,
+            speech_ssl_partial_update_lower_limit_index=0,
+            avhubert_checkpoint_path=avhubert_checkpoint_path,
+            lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+            hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
+            debug=debug,
+        )
+        run_ensemble(
+            hifigan_input=hifigan_input,
+            speech_ssl_model_name=speech_ssl_model_name,
+            speech_ssl_n_clusters=speech_ssl_n_clusters,
+            lip2sp_with_speech_ssl_checkpoint_path=lip2sp_with_speech_ssl_checkpoint_path,
+            lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+            hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
+            debug=debug,
+        )
 
-    lip2sp_with_speech_ssl_checkpoint_path = run_speech_ssl(
-        hifigan_input=hifigan_input,
-        speech_ssl_model_name=speech_ssl_model_name,
-        speech_ssl_n_clusters=speech_ssl_n_clusters,
-        speech_ssl_partial_update_use=True,
-        speech_ssl_partial_update_lower_limit_index=9,
-        avhubert_checkpoint_path=avhubert_checkpoint_path,
-        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-        hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
-        debug=debug,
-    )
-    run_ensemble(
-        hifigan_input=hifigan_input,
-        speech_ssl_model_name=speech_ssl_model_name,
-        speech_ssl_n_clusters=speech_ssl_n_clusters,
-        lip2sp_with_speech_ssl_checkpoint_path=lip2sp_with_speech_ssl_checkpoint_path,
-        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-        hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
-        debug=debug,
-    )
+        lip2sp_with_speech_ssl_checkpoint_path = run_speech_ssl(
+            hifigan_input=hifigan_input,
+            speech_ssl_model_name=speech_ssl_model_name,
+            speech_ssl_n_clusters=speech_ssl_n_clusters,
+            speech_ssl_partial_update_use=True,
+            speech_ssl_partial_update_lower_limit_index=9,
+            avhubert_checkpoint_path=avhubert_checkpoint_path,
+            lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+            hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
+            debug=debug,
+        )
+        run_ensemble(
+            hifigan_input=hifigan_input,
+            speech_ssl_model_name=speech_ssl_model_name,
+            speech_ssl_n_clusters=speech_ssl_n_clusters,
+            lip2sp_with_speech_ssl_checkpoint_path=lip2sp_with_speech_ssl_checkpoint_path,
+            lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+            hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
+            debug=debug,
+        )
 
-    lip2sp_with_speech_ssl_checkpoint_path = run_speech_ssl(
-        hifigan_input=hifigan_input,
-        speech_ssl_model_name=speech_ssl_model_name,
-        speech_ssl_n_clusters=speech_ssl_n_clusters,
-        speech_ssl_partial_update_use=True,
-        speech_ssl_partial_update_lower_limit_index=6,
-        avhubert_checkpoint_path=avhubert_checkpoint_path,
-        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-        hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
-        debug=debug,
-    )
-    run_ensemble(
-        hifigan_input=hifigan_input,
-        speech_ssl_model_name=speech_ssl_model_name,
-        speech_ssl_n_clusters=speech_ssl_n_clusters,
-        lip2sp_with_speech_ssl_checkpoint_path=lip2sp_with_speech_ssl_checkpoint_path,
-        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-        hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
-        debug=debug,
-    )
+        lip2sp_with_speech_ssl_checkpoint_path = run_speech_ssl(
+            hifigan_input=hifigan_input,
+            speech_ssl_model_name=speech_ssl_model_name,
+            speech_ssl_n_clusters=speech_ssl_n_clusters,
+            speech_ssl_partial_update_use=True,
+            speech_ssl_partial_update_lower_limit_index=6,
+            avhubert_checkpoint_path=avhubert_checkpoint_path,
+            lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+            hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
+            debug=debug,
+        )
+        run_ensemble(
+            hifigan_input=hifigan_input,
+            speech_ssl_model_name=speech_ssl_model_name,
+            speech_ssl_n_clusters=speech_ssl_n_clusters,
+            lip2sp_with_speech_ssl_checkpoint_path=lip2sp_with_speech_ssl_checkpoint_path,
+            lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+            hifigan_checkpoint_path_jvs=hifigan_checkpoint_path_jvs,
+            debug=debug,
+        )
 
 
 if __name__ == "__main__":
