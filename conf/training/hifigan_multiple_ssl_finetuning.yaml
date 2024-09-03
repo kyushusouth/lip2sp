@@ -20,7 +20,7 @@ gradient_clip_algorithm: "norm"
 checkpoints_save_dir: "~/lip2sp/checkpoints/hifigan_multiple_ssl_finetuning"
 finetune: false
 finetune_start_model_path:
-lip2sp_model_path: 
+lip2sp_model_path:
 optimizer:
   type: adamw
   learning_rate: 2.0e-4

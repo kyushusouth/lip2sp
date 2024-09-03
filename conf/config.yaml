@@ -3,7 +3,7 @@ defaults:
   - model: config
   - path: config
   - data_choice: config
-  - training: base_hubert
+  - training: hifigan_multiple_ssl_finetuning
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
 
