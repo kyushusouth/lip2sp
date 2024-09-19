@@ -41,39 +41,28 @@ class Preprocessor:
         self.conv_feature_dir = Path(
             cfg.path[process_data][process_model].conv_feature_dir
         ).expanduser()
-        self.final_feature_dir = Path(
-            cfg.path[process_data][process_model].final_feature_dir
+        self.layer_feature_dir = Path(
+            cfg.path[process_data][process_model].layer_feature_dir
         ).expanduser()
-        self.kmeans_path = (
+        self.kmeans_dir = Path(
+            cfg.path[cfg.model.decoder.speech_ssl.kmeans][process_model].kmeans_dir
+        ).expanduser()
+        self.layer_feature_cluster_dir = (
             Path(
-                cfg.path[cfg.model.decoder.speech_ssl.kmeans][process_model].kmeans_dir
-            ).expanduser()
-            / f"{self.cfg.model.decoder.speech_ssl.n_clusters}.pickle"
-        )
-        self.final_feature_cluster_dir = (
-            Path(
-                cfg.path[process_data][process_model].final_feature_cluster_dir
+                cfg.path[process_data][process_model].layer_feature_cluster_dir
             ).expanduser()
             / cfg.model.decoder.speech_ssl.kmeans
-            / str(cfg.model.decoder.speech_ssl.n_clusters)
         )
 
         if debug:
             self.conv_feature_dir = self.change_dirpath_for_debug(self.conv_feature_dir)
-            self.final_feature_dir = self.change_dirpath_for_debug(
-                self.final_feature_dir
+            self.layer_feature_dir = self.change_dirpath_for_debug(
+                self.layer_feature_dir
             )
-            self.kmeans_path = self.change_dirpath_for_debug(self.kmeans_path)
-            self.final_feature_cluster_dir = self.change_dirpath_for_debug(
-                self.final_feature_cluster_dir
+            self.kmeans_dir = self.change_dirpath_for_debug(self.kmeans_dir)
+            self.layer_feature_cluster_dir = self.change_dirpath_for_debug(
+                self.layer_feature_cluster_dir
             )
-
-        print(f"{type(self.model)=}")
-        print(f"{self.audio_dir=}")
-        print(f"{self.conv_feature_dir=}")
-        print(f"{self.final_feature_dir=}")
-        print(f"{self.kmeans_path=}")
-        print(f"{self.final_feature_cluster_dir=}")
 
     def change_dirpath_for_debug(self, dirpath) -> Path:
         return Path(str(dirpath).replace("dataset", "dataset_debug"))
@@ -99,12 +88,10 @@ class Preprocessor:
             )
         return path
 
-    def save_numerical_features(self) -> None:
+    def save_numerical_features(self, layer_index_lst: list[int]) -> None:
         print(f"save_numerical_features: {self.process_data}, {self.process_model}")
         for i, row in tqdm(self.df.iterrows(), total=len(self.df)):
             audio_path = self.extend_path(self.audio_dir, row, ".wav")
-            conv_feature_path = self.extend_path(self.conv_feature_dir, row, ".npy")
-            final_feature_path = self.extend_path(self.final_feature_dir, row, ".npy")
             if not audio_path.exists():
                 continue
 
@@ -128,24 +115,36 @@ class Preprocessor:
                 if self.process_model in ["wav2vec2", "data2vec"]:
                     conv_feature = conv_feature[0]
 
-                # 最終出力
-                final_feature = self.model.encoder(conv_feature).last_hidden_state
+                output = self.model(
+                    input_values=wav_input,
+                    output_hidden_states=True,
+                )
 
             conv_feature_ndarray = conv_feature.cpu().squeeze(0).numpy()
-            final_feature_ndarray = final_feature.cpu().squeeze(0).numpy()  # (T, C)
+            conv_feature_path = self.extend_path(self.conv_feature_dir, row, ".npy")
             conv_feature_path.parent.mkdir(parents=True, exist_ok=True)
-            final_feature_path.parent.mkdir(parents=True, exist_ok=True)
             np.save(str(conv_feature_path), conv_feature_ndarray)
-            np.save(str(final_feature_path), final_feature_ndarray)
+
+            for layer_index in layer_index_lst:
+                layer_feature_path = self.extend_path(
+                    self.layer_feature_dir / str(layer_index), row, ".npy"
+                )
+                layer_feature_path.parent.mkdir(parents=True, exist_ok=True)
+                layer_feature = (
+                    output.hidden_states[layer_index].cpu().squeeze(0).numpy()
+                )
+                np.save(str(layer_feature_path), layer_feature)
 
             if self.debug:
                 break
 
-    def save_kmeans(self) -> None:
+    def save_kmeans(self, layer_index: int, n_clusters: int) -> None:
         if self.process_data != self.cfg.model.decoder.speech_ssl.kmeans:
             return
 
-        print(f"save_kmeans: {self.process_data}, {self.process_model}")
+        print(
+            f"save_kmeans: {self.process_data}, {self.process_model}, {layer_index=}, {n_clusters=}"
+        )
 
         df_kmeans = self.df.copy()
 
@@ -154,51 +153,62 @@ class Preprocessor:
             (df_kmeans["data_split"] == "train") & (df_kmeans["corpus"] == "ATR")
         ].reset_index(drop=True)
 
-        final_feature_list = []
+        layer_feature_lst = []
         for i, row in tqdm(df_kmeans.iterrows(), total=len(df_kmeans)):
-            final_feature_path = self.extend_path(self.final_feature_dir, row, ".npy")
-            if not final_feature_path.exists():
+            layer_feature_path = self.extend_path(
+                self.layer_feature_dir / str(layer_index), row, ".npy"
+            )
+            if not layer_feature_path.exists():
                 continue
-            final_feature = np.load(str(final_feature_path))
-            final_feature_list.append(final_feature)
+            layer_feature = np.load(str(layer_feature_path))
+            layer_feature_lst.append(layer_feature)
 
-        final_feature_all = np.concatenate(final_feature_list, axis=0)
+        layer_feature_all = np.concatenate(layer_feature_lst, axis=0)
         kmeans = MiniBatchKMeans(
-            n_clusters=self.cfg.model.decoder.speech_ssl.n_clusters,
+            n_clusters=n_clusters,
             init="k-means++",
             batch_size=10000,
             compute_labels=False,
             random_state=42,
             verbose=1,
             max_iter=10000,
-        ).fit(final_feature_all)
+        ).fit(layer_feature_all)
 
-        self.kmeans_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(str(self.kmeans_path), "wb") as f:
+        kmeans_path = self.kmeans_dir / str(layer_index) / f"{n_clusters}.pickle"
+        kmeans_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(str(kmeans_path), "wb") as f:
             pickle.dump(kmeans, f)
 
-    def save_clusters(self):
-        if not self.kmeans_path.exists():
-            raise FileNotFoundError(f"{str(self.kmeans_path)} was not Found.")
+    def save_clusters(self, layer_index: int, n_clusters: int):
+        kmeans_path = self.kmeans_dir / str(layer_index) / f"{n_clusters}.pickle"
 
-        print(f"save_clusters: {self.process_data}, {self.process_model}")
+        if not kmeans_path.exists():
+            raise FileNotFoundError(f"{str(kmeans_path)} was not Found.")
 
-        with open(str(self.kmeans_path), "rb") as f:
+        print(
+            f"save_clusters: {self.process_data}, {self.process_model}, {layer_index=}, {n_clusters=}"
+        )
+
+        with open(str(kmeans_path), "rb") as f:
             kmeans = pickle.load(f)
 
         for i, row in tqdm(self.df.iterrows(), total=len(self.df)):
-            final_feature_path = self.extend_path(self.final_feature_dir, row, ".npy")
-            final_feature_cluster_path = self.extend_path(
-                self.final_feature_cluster_dir, row, ".npy"
+            layer_feature_path = self.extend_path(
+                self.layer_feature_dir / str(layer_index), row, ".npy"
             )
-            if not final_feature_path.exists():
+            layer_feature_cluster_path = self.extend_path(
+                self.layer_feature_cluster_dir / str(layer_index) / str(n_clusters),
+                row,
+                ".npy",
+            )
+            if not layer_feature_path.exists():
                 continue
 
-            final_feature = np.load(str(final_feature_path))
-            final_feature_cluster = kmeans.predict(final_feature)
-            final_feature_cluster += 1  # 0はパディングに使いたいので、1加算しておく
-            final_feature_cluster_path.parent.mkdir(parents=True, exist_ok=True)
-            np.save(str(final_feature_cluster_path), final_feature_cluster)
+            layer_feature = np.load(str(layer_feature_path))
+            layer_feature_cluster = kmeans.predict(layer_feature)
+            layer_feature_cluster += 1
+            layer_feature_cluster_path.parent.mkdir(parents=True, exist_ok=True)
+            np.save(str(layer_feature_cluster_path), layer_feature_cluster)
 
             if self.debug:
                 break
@@ -206,17 +216,21 @@ class Preprocessor:
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: omegaconf.DictConfig) -> None:
+    layer_index_lst = [8, 10, 12]
+    n_clusters_lst = [100, 200, 300]
     for process_data in ["kablab", "jvs", "hifi_captain"]:
-        for process_model in ["hubert", "wav2vec2", "data2vec-audio"]:
+        for process_model in ["hubert"]:
             preprocessor = Preprocessor(
                 cfg=cfg,
                 process_data=process_data,
                 process_model=process_model,
                 debug=False,
             )
-            preprocessor.save_numerical_features()
-            preprocessor.save_kmeans()
-            preprocessor.save_clusters()
+            preprocessor.save_numerical_features(layer_index_lst)
+            for layer_index in layer_index_lst:
+                for n_clusters in n_clusters_lst:
+                    preprocessor.save_kmeans(layer_index, n_clusters)
+                    preprocessor.save_clusters(layer_index, n_clusters)
 
 
 if __name__ == "__main__":
