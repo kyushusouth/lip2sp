@@ -72,6 +72,7 @@ def run_avhubert(
     n_clusters: int,
     layer_index_cluster: int,
     memory_atten_use: bool,
+    memory_atten_add_self_atten: bool,
     debug: bool,
 ) -> None:
     run_with_retry(
@@ -88,6 +89,7 @@ def run_avhubert(
             f"model.decoder.speech_ssl.n_clusters={n_clusters}",
             f"model.decoder.speech_ssl.layer_index_cluster={layer_index_cluster}",
             f"model.memory_atten.use={memory_atten_use}",
+            f"model.memory_atten.add_self_atten={memory_atten_add_self_atten}",
             "training=speech_memory_debug" if debug else "training=speech_memory",
             "training.loss_weights.mel_loss=1.0",
             f"training.loss_weights.ssl_feature_cluster_linear_loss={loss_weights_ssl_feature_cluster_linear_loss}",
@@ -127,6 +129,7 @@ def main():
                     n_clusters=n_clusters,
                     layer_index_cluster=layer_index_cluster,
                     memory_atten_use=False,
+                    memory_atten_add_self_atten=False,
                     debug=debug,
                 )
                 run_avhubert(
@@ -136,6 +139,17 @@ def main():
                     n_clusters=n_clusters,
                     layer_index_cluster=layer_index_cluster,
                     memory_atten_use=True,
+                    memory_atten_add_self_atten=False,
+                    debug=debug,
+                )
+                run_avhubert(
+                    hifigan_input=["mel"],
+                    hifigan_checkpoint_path_jvs=str(hifigan_checkpoint_path_jvs),
+                    loss_weights_ssl_feature_cluster_linear_loss=loss_weight_cluster,
+                    n_clusters=n_clusters,
+                    layer_index_cluster=layer_index_cluster,
+                    memory_atten_use=True,
+                    memory_atten_add_self_atten=True,
                     debug=debug,
                 )
 

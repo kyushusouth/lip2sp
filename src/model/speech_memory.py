@@ -77,12 +77,14 @@ class AudioBridingBlock(nn.Module):
         )
         self.layer_norm = nn.LayerNorm(hidden_channels)
 
-    def forward(self, feature, memory, padding_mask):
+    def forward(
+        self, feature: torch.Tensor, memory: torch.Tensor, padding_mask: None
+    ) -> torch.Tensor:
         """
         args:
             feature: (B, T, C)
             memory: (B, N, C)
-            padding_mask: (B, T)
+            padding_mask:
         returns:
             output: (B, T, C)
         """
@@ -90,6 +92,38 @@ class AudioBridingBlock(nn.Module):
             query=feature,
             key=memory,
             value=memory,
+        )
+        output = self.layer_norm(output + feature)
+        return output
+
+
+class SelfAttentionModule(nn.Module):
+    def __init__(self, cfg: omegaconf.DictConfig, hidden_channels: int) -> None:
+        super().__init__()
+        self.atten = nn.MultiheadAttention(
+            embed_dim=hidden_channels,
+            num_heads=hidden_channels // cfg.model.memory_atten.num_channels_per_head,
+            dropout=cfg.model.memory_atten.dropout,
+            batch_first=True,
+        )
+        self.layer_norm = nn.LayerNorm(hidden_channels)
+
+    def forward(
+        self, feature: torch.Tensor, memory: None, padding_mask: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        args:
+            feature: (B, T, C)
+            memory:
+            padding_mask: (B, T)
+        returns:
+            output: (B, T, C)
+        """
+        output, atten_weights = self.atten(
+            query=feature,
+            key=feature,
+            value=feature,
+            key_padding_mask=padding_mask,
         )
         output = self.layer_norm(output + feature)
         return output
@@ -112,6 +146,8 @@ class AudioBridingModule(nn.Module):
         self.layers = []
         for _ in range(cfg.model.memory_atten.num_layers):
             self.layers.append(AudioBridingBlock(cfg, hidden_channels))
+            if cfg.model.memory_atten.add_self_atten:
+                self.layers.append(SelfAttentionModule(cfg, hidden_channels))
         self.layers = nn.ModuleList(self.layers)
 
     def forward(self, feature, padding_mask):
