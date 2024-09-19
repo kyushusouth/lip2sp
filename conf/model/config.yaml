@@ -6,6 +6,7 @@ defaults:
   - hifigan: base
   - decoder: config
   - layerwise_asr: config
+  - memory_atten : config
 
 spk_emb_layer:
   use: true

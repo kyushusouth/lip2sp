@@ -1,0 +1,56 @@
+max_epoch: 2
+batch_size: 4
+num_workers: 4
+input_sec: 10
+seed: 42
+monitoring_metric: "val_total_loss"
+monitoring_mode: "min"
+early_stopping_patience: 10
+save_checkpoint_every_n_epochs: 1
+save_checkpoint_top_k: 1
+limit_train_batches: 10
+limit_val_batches: 10
+limit_test_batches: 2
+log_every_n_steps: 10
+precision: "16-mixed"
+accumulate_grad_batches: 8
+gradient_clip_val: 3.0
+gradient_clip_algorithm: "norm"
+checkpoints_save_dir: "~/lip2sp/checkpoints/debug_speech_memory"
+finetune: false
+finetune_start_model_path:
+loss_weights:
+  mel_loss: 1.0
+  ssl_feature_cluster_linear_loss: 1.0
+optimizer:
+  learning_rate: 1.0e-3
+  beta_1: 0.9
+  beta_2: 0.98
+  weight_decay: 1.0e-2
+scheduler:
+  cycle_mult: 1.0
+  min_lr: 1.0e-6
+  warmup_steps: 0.1
+  gamma: 1.0
+wandb:
+  project_name: "debug"
+  default_root_dir: "./"
+  run_name:
+  group_name:
+augs:
+  random_crop:
+    use: true
+  horizontal_flip:
+    use: true
+    p: 0.5
+  time_masking:
+    use: true
+    max_masking_sec: 0.5
+  random_erasing:
+    use: false
+    p: 0.5
+    scale_min: 0.02
+    scale_max: 0.33
+    ratio_min: 0.3
+    ratio_max: 3.3
+    value: 0

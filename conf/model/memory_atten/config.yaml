@@ -1,0 +1,3 @@
+num_channels_per_head: 64
+dropout: 0.1
+num_layers: 2

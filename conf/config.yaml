@@ -3,7 +3,7 @@ defaults:
   - model: config
   - path: config
   - data_choice: config
-  - training: hifigan_multiple_ssl_finetuning
+  - training: speech_memory_debug 
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
 

@@ -32,6 +32,7 @@ speech_ssl:
   encoder_output_dim: 768
   kmeans: kablab
   n_clusters: 200
+  layer_index_cluster: 12
   ignore_index: 0
   freeze: false
   partial_update:
