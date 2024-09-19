@@ -136,7 +136,8 @@ class SpeechMemoryModel(nn.Module):
         self.avhubert = load_avhubert(cfg)
         hidden_channels = self.avhubert.encoder_embed_dim
 
-        self.abm = AudioBridingModule(cfg, hidden_channels)
+        if cfg.model.memory_atten.use:
+            self.abm = AudioBridingModule(cfg, hidden_channels)
 
         if cfg.model.spk_emb_layer.use:
             self.spk_emb_layer = nn.Linear(
@@ -204,7 +205,8 @@ class SpeechMemoryModel(nn.Module):
             lip, padding_mask_lip, audio
         )  # (B, T, C)
 
-        feature = self.abm(feature, padding_mask_lip)
+        if self.cfg.model.memory_atten.use:
+            feature = self.abm(feature, padding_mask_lip)
 
         if self.cfg.model.spk_emb_layer.use:
             spk_emb = spk_emb.unsqueeze(1).expand(-1, feature.shape[1], -1)  # (B, T, C)
