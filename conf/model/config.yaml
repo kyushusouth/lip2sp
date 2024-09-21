@@ -15,3 +15,5 @@ spk_emb_layer:
 
 ssl_type: avhubert
 ssl_feature_dropout: 0
+
+freeze: []

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import hydra
@@ -11,8 +12,11 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from src.main import on_start  # noqa: F401
 from src.main.on_end import rename_checkpoint_file
-from src.pl_datamodule.speech_memory import SpeechMemoryDataModule
-from src.pl_module.hifigan_speech_memory import LitHiFiGANSpeechMemoryModel
+from src.pl_datamodule.base_hubert_2 import BaseHuBERT2DataModule
+from src.pl_module.base_hubert_2 import LitBaseHuBERT2Module
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
@@ -23,15 +27,14 @@ def main(cfg: omegaconf.DictConfig) -> None:
         Path(cfg.training.checkpoints_save_dir).expanduser() / on_start.CURRENT_TIME
     )
 
-    datamodule = SpeechMemoryDataModule(cfg)
+    datamodule = BaseHuBERT2DataModule(cfg)
 
     if cfg.training.finetune:
-        model = LitHiFiGANSpeechMemoryModel.load_from_checkpoint(
-            checkpoint_path=cfg.training.finetune_start_model_path,
-            cfg=cfg,
+        model = LitBaseHuBERT2Module.load_from_checkpoint(
+            checkpoint_path=cfg.training.finetune_start_model_path, cfg=cfg
         )
     else:
-        model = LitHiFiGANSpeechMemoryModel(cfg)
+        model = LitBaseHuBERT2Module(cfg=cfg)
 
     wandb_logger = WandbLogger(
         project=cfg.training.wandb.project_name,
@@ -75,6 +78,9 @@ def main(cfg: omegaconf.DictConfig) -> None:
         strategy="auto",
         log_every_n_steps=cfg.training.log_every_n_steps,
         precision=cfg.training.precision,
+        accumulate_grad_batches=cfg.training.accumulate_grad_batches,
+        gradient_clip_val=cfg.training.gradient_clip_val,
+        gradient_clip_algorithm=cfg.training.gradient_clip_algorithm,
         num_sanity_val_steps=0,
     )
 
@@ -89,6 +95,12 @@ def main(cfg: omegaconf.DictConfig) -> None:
             model=model,
             datamodule=datamodule,
         )
+
+    trainer.test(
+        model=model,
+        datamodule=datamodule,
+        ckpt_path="best",
+    )
 
     rename_checkpoint_file(cfg.training.checkpoints_save_dir)
 

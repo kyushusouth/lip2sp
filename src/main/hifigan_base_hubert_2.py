@@ -11,8 +11,8 @@ from pytorch_lightning.loggers import WandbLogger
 import wandb
 from src.main import on_start  # noqa: F401
 from src.main.on_end import rename_checkpoint_file
-from src.pl_datamodule.speech_memory import SpeechMemoryDataModule
-from src.pl_module.hifigan_speech_memory import LitHiFiGANSpeechMemoryModel
+from src.pl_datamodule.base_hubert_2 import BaseHuBERT2DataModule
+from src.pl_module.hifigan_base_hubert_2 import LitHiFiGANBaseHuBERT2Model
 
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
@@ -23,15 +23,15 @@ def main(cfg: omegaconf.DictConfig) -> None:
         Path(cfg.training.checkpoints_save_dir).expanduser() / on_start.CURRENT_TIME
     )
 
-    datamodule = SpeechMemoryDataModule(cfg)
+    datamodule = BaseHuBERT2DataModule(cfg)
 
     if cfg.training.finetune:
-        model = LitHiFiGANSpeechMemoryModel.load_from_checkpoint(
+        model = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
             checkpoint_path=cfg.training.finetune_start_model_path,
             cfg=cfg,
         )
     else:
-        model = LitHiFiGANSpeechMemoryModel(cfg)
+        model = LitHiFiGANBaseHuBERT2Model(cfg)
 
     wandb_logger = WandbLogger(
         project=cfg.training.wandb.project_name,

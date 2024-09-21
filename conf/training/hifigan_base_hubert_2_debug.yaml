@@ -16,10 +16,10 @@ precision: "16-mixed"
 accumulate_grad_batches: 1
 gradient_clip_val: 3.0
 gradient_clip_algorithm: "norm"
-checkpoints_save_dir: "~/lip2sp/checkpoints/debug_hifigan_speech_memory"
+checkpoints_save_dir: "~/lip2sp/checkpoints/debug_hifigan_base_hubert_2"
 finetune: false
 finetune_start_model_path:
-resume: 
+resume: false
 resume_checkpoint_path: 
 optimizer:
   type: adamw

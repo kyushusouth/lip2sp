@@ -21,8 +21,9 @@ linear:
 
 ensemble:
   freeze: false
-  n_hidden_layers: 3
+  nhead: 12
   dropout: 0.1
+  num_layers: 4
 
 speech_ssl:
   model_name: "rinna/japanese-hubert-base"
@@ -37,10 +38,12 @@ speech_ssl:
   freeze: false
   partial_update:
     use: false
-    lower_limit_index: 9
+    lower_or_upper: "lower"
+    thres: 9
   encoder_input_mask:
     use: false
     mask_prob: 0.8
     mask_length: 10
 
 vocoder_input_cluster: conv
+vocoder_input: simple 
