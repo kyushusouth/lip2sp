@@ -92,7 +92,6 @@ def run_hifigan(
 
 def run_avhubert(
     hifigan_model_path_mel: str,
-    hifigan_model_path_speech_ssl: str,
     hifigan_model_path_mel_speech_ssl: str,
     freeze_pattern: list[str],
     cluster_loss_weight: float,
@@ -111,7 +110,6 @@ def run_avhubert(
             "data_choice.jsut.use=false",
             "model.hifigan.freeze=true",
             f"model.hifigan.model_path_mel={hifigan_model_path_mel}",
-            f"model.hifigan.model_path_speech_ssl={hifigan_model_path_speech_ssl}",
             f"model.hifigan.model_path_mel_speech_ssl={hifigan_model_path_mel_speech_ssl}",
             f"model.freeze={freeze_pattern}",
             "model.decoder.vocoder_input=avhubert",
@@ -135,7 +133,6 @@ def run_avhubert(
 
 def run_hubert(
     hifigan_model_path_mel: str,
-    hifigan_model_path_speech_ssl: str,
     hifigan_model_path_mel_speech_ssl: str,
     freeze_pattern: list[str],
     cluster_loss_weight: float,
@@ -158,7 +155,6 @@ def run_hubert(
             "data_choice.jsut.use=false",
             "model.hifigan.freeze=true",
             f"model.hifigan.model_path_mel={hifigan_model_path_mel}",
-            f"model.hifigan.model_path_speech_ssl={hifigan_model_path_speech_ssl}",
             f"model.hifigan.model_path_mel_speech_ssl={hifigan_model_path_mel_speech_ssl}",
             f"model.freeze={freeze_pattern}",
             "model.decoder.vocoder_input=speech_ssl",
@@ -186,7 +182,6 @@ def run_hubert(
 
 def run_ensemble(
     hifigan_model_path_mel: str,
-    hifigan_model_path_speech_ssl: str,
     hifigan_model_path_mel_speech_ssl: str,
     freeze_pattern: list[str],
     cluster_loss_weight: float,
@@ -206,7 +201,6 @@ def run_ensemble(
             "data_choice.jsut.use=false",
             "model.hifigan.freeze=true",
             f"model.hifigan.model_path_mel={hifigan_model_path_mel}",
-            f"model.hifigan.model_path_speech_ssl={hifigan_model_path_speech_ssl}",
             f"model.hifigan.model_path_mel_speech_ssl={hifigan_model_path_mel_speech_ssl}",
             f"model.freeze={freeze_pattern}",
             "model.decoder.vocoder_input=ensemble",
@@ -278,13 +272,6 @@ def main():
                 n_clusters=n_cluster,
                 debug=debug,
             )
-            hifigan_checkpoint_path_jvs_speech_ssl = run_hifigan(
-                hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-                hifigan_input=["hubert_layer_feature_cluster"],
-                layer_index_cluster=layer_index_cluster,
-                n_clusters=n_cluster,
-                debug=debug,
-            )
             hifigan_checkpoint_path_jvs_mel_speech_ssl = run_hifigan(
                 hifigan_checkpoint_dir=hifigan_checkpoint_dir,
                 hifigan_input=["mel", "hubert_layer_feature_cluster"],
@@ -295,7 +282,6 @@ def main():
             for cluster_loss_weight in cluster_loss_weights:
                 avhubert_checkpoint_path = run_avhubert(
                     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
-                    hifigan_model_path_speech_ssl=hifigan_checkpoint_path_jvs_speech_ssl,
                     hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
                     freeze_pattern=freeze_patterns["train_avhubert"],
                     cluster_loss_weight=cluster_loss_weight,
@@ -306,7 +292,6 @@ def main():
                 )
                 hubert_checkpoint_path = run_hubert(
                     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
-                    hifigan_model_path_speech_ssl=hifigan_checkpoint_path_jvs_speech_ssl,
                     hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
                     freeze_pattern=freeze_patterns["train_hubert"],
                     cluster_loss_weight=cluster_loss_weight,
@@ -321,7 +306,6 @@ def main():
                 )
                 hubert_checkpoint_path = run_ensemble(
                     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
-                    hifigan_model_path_speech_ssl=hifigan_checkpoint_path_jvs_speech_ssl,
                     hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
                     freeze_pattern=freeze_patterns["train_ensemble"],
                     cluster_loss_weight=cluster_loss_weight,

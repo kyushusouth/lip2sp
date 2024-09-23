@@ -603,13 +603,6 @@ class LitBaseHuBERT2Module(L.LightningModule):
         )
         self.hifigan_mel.eval()
 
-        self.hifigan_speech_ssl = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
-            self.cfg.model.hifigan.model_path_speech_ssl,
-            cfg=self.cfg,
-            input_type=["hubert_layer_feature_cluster"],
-        )
-        self.hifigan_speech_ssl.eval()
-
         self.hifigan_mel_speech_ssl = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
             self.cfg.model.hifigan.model_path_mel_speech_ssl,
             cfg=self.cfg,
@@ -773,12 +766,10 @@ class LitBaseHuBERT2Module(L.LightningModule):
             )
 
         wav_pred_mel = self.hifigan_mel.gen(inputs_dict_pred, spk_emb)
-        wav_pred_speech_ssl = self.hifigan_speech_ssl.gen(inputs_dict_pred, spk_emb)
         wav_pred_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
             inputs_dict_pred, spk_emb
         )
         wav_abs_mel = self.hifigan_mel.gen(inputs_dict_gt, spk_emb)
-        wav_abs_speech_ssl = self.hifigan_speech_ssl.gen(inputs_dict_gt, spk_emb)
         wav_abs_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
             inputs_dict_gt, spk_emb
         )
@@ -786,20 +777,16 @@ class LitBaseHuBERT2Module(L.LightningModule):
         wav_eval_dct = {
             "gt": wav_gt,
             "pred_mel": wav_pred_mel,
-            "pred_speech_ssl": wav_pred_speech_ssl,
             "pred_mel_speech_ssl": wav_pred_mel_speech_ssl,
             "abs_mel": wav_abs_mel,
-            "abs_speech_ssl": wav_abs_speech_ssl,
             "abs_mel_speech_ssl": wav_abs_mel_speech_ssl,
         }
 
         n_sample_min = min(
             wav_gt.shape[-1],
             wav_abs_mel.shape[-1],
-            wav_abs_speech_ssl.shape[-1],
             wav_abs_mel_speech_ssl.shape[-1],
             wav_pred_mel.shape[-1],
-            wav_pred_speech_ssl.shape[-1],
             wav_pred_mel_speech_ssl.shape[-1],
         )
 
