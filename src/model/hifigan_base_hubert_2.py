@@ -1,3 +1,4 @@
+import omegaconf
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -152,18 +153,19 @@ class ResBlock2(torch.nn.Module):
 
 
 class Generator(torch.nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg: omegaconf.DictConfig, input_type: list[str]):
         super(Generator, self).__init__()
         self.cfg = cfg
+        self.input_type = input_type
 
         model_in_dim = 0
-        if "mel" in cfg.model.hifigan.input:
+        if "mel" in input_type:
             model_in_dim += cfg.model.hifigan.embedding_dim
             self.emb_mel = nn.Linear(
                 int(cfg.data.audio.n_mels * 2),
                 cfg.model.hifigan.embedding_dim,
             )
-        if "hubert_layer_feature_cluster" in cfg.model.hifigan.input:
+        if "hubert_layer_feature_cluster" in input_type:
             model_in_dim += cfg.model.hifigan.embedding_dim
             self.emb_hubert_layer_feature_cluster = nn.Embedding(
                 cfg.model.decoder.speech_ssl.n_clusters + 1,
@@ -226,9 +228,9 @@ class Generator(torch.nn.Module):
         spk_emb: (B, C)
         """
         features = []
-        if "mel" in self.cfg.model.hifigan.input:
+        if "mel" in self.input_type:
             features.append(self.emb_mel(inputs_dict["mel"]))
-        if "hubert_layer_feature_cluster" in self.cfg.model.hifigan.input:
+        if "hubert_layer_feature_cluster" in self.input_type:
             features.append(
                 self.emb_hubert_layer_feature_cluster(
                     inputs_dict["hubert_layer_feature_cluster"]

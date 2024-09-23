@@ -17,17 +17,25 @@ from src.model.hifigan_base_hubert_2 import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class LitHiFiGANBaseHuBERT2Model(L.LightningModule):
-    def __init__(self, cfg: omegaconf.DictConfig) -> None:
+    def __init__(
+        self,
+        cfg: omegaconf.DictConfig,
+        input_type: list[str] | None = None,
+    ) -> None:
         super().__init__()
         self.cfg = cfg
         self.learning_rate = cfg.training.optimizer.learning_rate
         self.automatic_optimization = False
 
-        self.gen = Generator(cfg)
+        if input_type is None:
+            self.gen = Generator(cfg, cfg.model.hifigan.input)
+        else:
+            self.gen = Generator(cfg, input_type)
+
         self.mpd = MultiPeriodDiscriminator()
         self.msd = MultiScaleDiscriminator()
 

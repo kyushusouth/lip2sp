@@ -7,6 +7,9 @@ upsample_kernel_sizes: [11, 8, 8, 4, 4]
 input: ["mel", "hubert_layer_feature_cluster"]
 embedding_dim: 128
 model_path:
+model_path_mel:
+model_path_speech_ssl:
+model_path_mel_speech_ssl:
 freeze: false
 loss:
   n_mels: 80

@@ -46,4 +46,4 @@ speech_ssl:
     mask_length: 10
 
 vocoder_input_cluster: conv
-vocoder_input: simple 
+vocoder_input: avhubert 

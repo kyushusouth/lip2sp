@@ -575,6 +575,139 @@ class LitBaseHuBERT2Module(L.LightningModule):
             filename="val_pred_mel_ensemble",
         )
 
+    def on_test_start(self) -> None:
+        self.model.eval()
+
+        self.test_data_columns = [
+            "speaker",
+            "filename",
+            "kind",
+            "wav",
+            "pesq",
+            "stoi",
+            "estoi",
+            "wer",
+            "utmos",
+        ]
+        self.test_data_list = []
+
+        csv_path = Path(self.cfg.path.kablab.utt_csv_test_path).expanduser()
+        self.df_utt = pd.read_csv(str(csv_path))
+        self.df_utt = self.df_utt.drop(columns=["index"])
+        self.df_utt = self.df_utt.loc[self.df_utt["subset"] == "j"]
+
+        self.hifigan_mel = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
+            self.cfg.model.hifigan.model_path_mel,
+            cfg=self.cfg,
+            input_type=["mel"],
+        )
+        self.hifigan_mel.eval()
+
+        self.hifigan_speech_ssl = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
+            self.cfg.model.hifigan.model_path_speech_ssl,
+            cfg=self.cfg,
+            input_type=["hubert_layer_feature_cluster"],
+        )
+        self.hifigan_speech_ssl.eval()
+
+        self.hifigan_mel_speech_ssl = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
+            self.cfg.model.hifigan.model_path_mel_speech_ssl,
+            cfg=self.cfg,
+            input_type=["mel", "hubert_layer_feature_cluster"],
+        )
+        self.hifigan_mel_speech_ssl.eval()
+
+        self.wb_pesq_evaluator = PerceptualEvaluationSpeechQuality(
+            self.cfg.data.audio.sr, "wb"
+        )
+        self.stoi_evaluator = ShortTimeObjectiveIntelligibility(
+            self.cfg.data.audio.sr, extended=False
+        )
+        self.estoi_evaluator = ShortTimeObjectiveIntelligibility(
+            self.cfg.data.audio.sr, extended=True
+        )
+        self.speech_recognizer = whisper.load_model("large")
+        self.mecab = MeCab.Tagger("-Owakati")
+
+    def test_step_process(
+        self,
+        wav_eval: torch.Tensor,
+        wav_gt: torch.Tensor,
+        n_sample_min: int,
+        utt: str,
+        speaker: str,
+        filename: str,
+        kind: str,
+        wandb_table_data: list,
+    ) -> None:
+        """
+        args:
+            wav_eval: (B, T)
+            wav_gt: (B, T)
+            n_sample_min:
+            n_sample_min:
+            utt:
+            speaker:
+            filename:
+            kind:
+            is_gt:
+            wandb_table_data:
+        """
+        wav_eval = self.process_wav(wav_eval, n_sample_min)
+        wav_gt = self.process_wav(wav_gt, n_sample_min)
+
+        if kind == "gt":
+            pesq, stoi, estoi = None, None, None
+        else:
+            pesq = self.wb_pesq_evaluator(wav_eval, wav_gt)
+            stoi = self.stoi_evaluator(wav_eval, wav_gt)
+            estoi = self.estoi_evaluator(wav_eval, wav_gt)
+
+        utt_recog = (
+            self.speech_recognizer.transcribe(
+                wav_eval.to(dtype=torch.float32), language="ja"
+            )["text"]
+            .replace("。", "")
+            .replace("、", "")
+        )
+
+        utt_parse = self.mecab.parse(utt)
+        utt_recog_parse = self.mecab.parse(utt_recog)
+        word_error_rate = self.calc_error_rate(utt_parse, utt_recog_parse)
+
+        save_dir = (
+            Path(
+                str(Path(self.cfg.training.checkpoints_save_dir)).replace(
+                    "checkpoints", "results"
+                )
+            )
+            / speaker
+            / filename
+        )
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        write(
+            filename=str(save_dir / f"{kind}.wav"),
+            rate=self.cfg.data.audio.sr,
+            data=wav_eval.cpu().numpy(),
+        )
+
+        utmos = self.calc_utmos(str(save_dir / f"{kind}.wav"))
+
+        wandb_table_data.append(
+            [
+                speaker,
+                filename,
+                kind,
+                wandb.Audio(wav_eval.cpu(), sample_rate=self.cfg.data.audio.sr),
+                pesq,
+                stoi,
+                estoi,
+                word_error_rate,
+                utmos,
+            ]
+        )
+
     def test_step(self, batch: list, batch_index: int) -> None:
         (
             wav_gt,
@@ -622,179 +755,72 @@ class LitBaseHuBERT2Module(L.LightningModule):
             padding_mask_speech_ssl=~padding_mask_feature_speech_ssl,
         )
 
-        if self.cfg.model.decoder.vocoder_input == "simple":
-            inputs_dict = self.hifigan.prepare_inputs_dict(
+        inputs_dict_gt = self.hifigan_mel.prepare_inputs_dict(
+            feature, hubert_layer_feature_cluster
+        )
+
+        if self.cfg.model.decoder.vocoder_input == "avhubert":
+            inputs_dict_pred = self.hifigan_mel.prepare_inputs_dict(
                 pred_mel, pred_ssl_feature_cluster.argmax(dim=1)
             )
         elif self.cfg.model.decoder.vocoder_input == "speech_ssl":
-            inputs_dict = self.hifigan.prepare_inputs_dict(
+            inputs_dict_pred = self.hifigan_mel.prepare_inputs_dict(
                 pred_mel_speech_ssl, pred_ssl_feature_cluster_speech_ssl.argmax(dim=1)
             )
         elif self.cfg.model.decoder.vocoder_input == "ensemble":
-            inputs_dict = self.hifigan.prepare_inputs_dict(
+            inputs_dict_pred = self.hifigan_mel.prepare_inputs_dict(
                 pred_mel_ensemble, pred_ssl_feature_cluster_ensemble.argmax(dim=1)
             )
-        wav_pred = self.hifigan.gen(inputs_dict, spk_emb)
 
-        inputs_dict = self.hifigan.prepare_inputs_dict(
-            feature, hubert_layer_feature_cluster
+        wav_pred_mel = self.hifigan_mel.gen(inputs_dict_pred, spk_emb)
+        wav_pred_speech_ssl = self.hifigan_speech_ssl.gen(inputs_dict_pred, spk_emb)
+        wav_pred_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
+            inputs_dict_pred, spk_emb
         )
-        wav_abs = self.hifigan.gen(inputs_dict, spk_emb)
+        wav_abs_mel = self.hifigan_mel.gen(inputs_dict_gt, spk_emb)
+        wav_abs_speech_ssl = self.hifigan_speech_ssl.gen(inputs_dict_gt, spk_emb)
+        wav_abs_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
+            inputs_dict_gt, spk_emb
+        )
 
-        n_sample_min = min(wav_gt.shape[-1], wav_pred.shape[-1], wav_abs.shape[-1])
-        wav_gt = self.process_wav(wav_gt, n_sample_min)
-        wav_abs = self.process_wav(wav_abs, n_sample_min)
-        wav_pred = self.process_wav(wav_pred, n_sample_min)
+        wav_eval_dct = {
+            "gt": wav_gt,
+            "pred_mel": wav_pred_mel,
+            "pred_speech_ssl": wav_pred_speech_ssl,
+            "pred_mel_speech_ssl": wav_pred_mel_speech_ssl,
+            "abs_mel": wav_abs_mel,
+            "abs_speech_ssl": wav_abs_speech_ssl,
+            "abs_mel_speech_ssl": wav_abs_mel_speech_ssl,
+        }
 
-        pesq_abs = self.wb_pesq_evaluator(wav_abs, wav_gt)
-        pesq_pred = self.wb_pesq_evaluator(wav_pred, wav_gt)
-        stoi_abs = self.stoi_evaluator(wav_abs, wav_gt)
-        stoi_pred = self.stoi_evaluator(wav_pred, wav_gt)
-        estoi_abs = self.estoi_evaluator(wav_abs, wav_gt)
-        estoi_pred = self.estoi_evaluator(wav_pred, wav_gt)
+        n_sample_min = min(
+            wav_gt.shape[-1],
+            wav_abs_mel.shape[-1],
+            wav_abs_speech_ssl.shape[-1],
+            wav_abs_mel_speech_ssl.shape[-1],
+            wav_pred_mel.shape[-1],
+            wav_pred_speech_ssl.shape[-1],
+            wav_pred_mel_speech_ssl.shape[-1],
+        )
 
-        utt = None
         for i, row in self.df_utt.iterrows():
             if str(row["utt_num"]) in filename[0]:
                 utt = row["text"].replace("。", "").replace("、", "")
-                break
-        if utt is None:
-            raise ValueError("Utterance was not found.")
 
-        utt_recog_gt = (
-            self.speech_recognizer.transcribe(
-                wav_gt.to(dtype=torch.float32), language="ja"
-            )["text"]
-            .replace("。", "")
-            .replace("、", "")
-        )
-        utt_recog_abs = (
-            self.speech_recognizer.transcribe(
-                wav_abs.to(dtype=torch.float32), language="ja"
-            )["text"]
-            .replace("。", "")
-            .replace("、", "")
-        )
-        utt_recog_pred = (
-            self.speech_recognizer.transcribe(
-                wav_pred.to(dtype=torch.float32), language="ja"
-            )["text"]
-            .replace("。", "")
-            .replace("、", "")
-        )
-
-        utt_parse = self.mecab.parse(utt)
-        utt_recog_gt_parse = self.mecab.parse(utt_recog_gt)
-        utt_recog_abs_parse = self.mecab.parse(utt_recog_abs)
-        utt_recog_pred_parse = self.mecab.parse(utt_recog_pred)
-
-        wer_gt = self.calc_error_rate(utt_parse, utt_recog_gt_parse)
-        wer_abs = self.calc_error_rate(utt_parse, utt_recog_abs_parse)
-        wer_pred = self.calc_error_rate(utt_parse, utt_recog_pred_parse)
-
-        save_dir = (
-            Path(
-                str(Path(self.cfg.training.checkpoints_save_dir)).replace(
-                    "checkpoints", "results"
-                )
+        wandb_table_data = []
+        for wav_eval_kind, wav_eval in wav_eval_dct.items():
+            self.test_step_process(
+                wav_eval=wav_eval,
+                wav_gt=wav_gt,
+                n_sample_min=n_sample_min,
+                utt=utt,
+                speaker=speaker[0],
+                filename=filename[0],
+                kind=wav_eval_kind,
+                wandb_table_data=wandb_table_data,
             )
-            / speaker[0]
-            / filename[0]
-        )
-        save_dir.mkdir(parents=True, exist_ok=True)
-        write(
-            filename=str(save_dir / "gt.wav"),
-            rate=self.cfg.data.audio.sr,
-            data=wav_gt.cpu().numpy(),
-        )
-        write(
-            filename=str(save_dir / "abs.wav"),
-            rate=self.cfg.data.audio.sr,
-            data=wav_abs.cpu().numpy(),
-        )
-        write(
-            filename=str(save_dir / "pred.wav"),
-            rate=self.cfg.data.audio.sr,
-            data=wav_pred.cpu().numpy(),
-        )
 
-        utmos_gt = self.calc_utmos(str(save_dir / "gt.wav"))
-        utmos_abs = self.calc_utmos(str(save_dir / "abs.wav"))
-        utmos_pred = self.calc_utmos(str(save_dir / "pred.wav"))
-
-        data = [
-            [
-                speaker[0],
-                filename[0],
-                "gt",
-                wandb.Audio(wav_gt.cpu(), sample_rate=self.cfg.data.audio.sr),
-                None,
-                None,
-                None,
-                wer_gt,
-                utmos_gt,
-            ],
-            [
-                speaker[0],
-                filename[0],
-                "abs",
-                wandb.Audio(wav_abs.cpu(), sample_rate=self.cfg.data.audio.sr),
-                pesq_abs,
-                stoi_abs,
-                estoi_abs,
-                wer_abs,
-                utmos_abs,
-            ],
-            [
-                speaker[0],
-                filename[0],
-                "pred",
-                wandb.Audio(wav_pred.cpu(), sample_rate=self.cfg.data.audio.sr),
-                pesq_pred,
-                stoi_pred,
-                estoi_pred,
-                wer_pred,
-                utmos_pred,
-            ],
-        ]
-        self.test_data_list += data
-
-    def on_test_start(self) -> None:
-        self.test_data_columns = [
-            "speaker",
-            "filename",
-            "kind",
-            "wav",
-            "pesq",
-            "stoi",
-            "estoi",
-            "wer",
-            "utmos",
-        ]
-        self.test_data_list = []
-
-        csv_path = Path("~/lip2sp/csv/ATR503.csv").expanduser()
-        self.df_utt = pd.read_csv(str(csv_path))
-        self.df_utt = self.df_utt.drop(columns=["index"])
-        self.df_utt = self.df_utt.loc[self.df_utt["subset"] == "j"]
-
-        self.hifigan = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
-            self.cfg.model.hifigan.model_path,
-            cfg=self.cfg,
-        )
-        self.hifigan.eval()
-
-        self.wb_pesq_evaluator = PerceptualEvaluationSpeechQuality(
-            self.cfg.data.audio.sr, "wb"
-        )
-        self.stoi_evaluator = ShortTimeObjectiveIntelligibility(
-            self.cfg.data.audio.sr, extended=False
-        )
-        self.estoi_evaluator = ShortTimeObjectiveIntelligibility(
-            self.cfg.data.audio.sr, extended=True
-        )
-        self.speech_recognizer = whisper.load_model("large")
-        self.mecab = MeCab.Tagger("-Owakati")
+        self.test_data_list += wandb_table_data
 
     def on_test_end(self) -> None:
         table = wandb.Table(columns=self.test_data_columns, data=self.test_data_list)
@@ -807,12 +833,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
         wer_index = self.test_data_columns.index("wer")
         utmos_index = self.test_data_columns.index("utmos")
 
-        result: dict[str, dict[str, list]] = {
-            "gt": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
-            "abs": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
-            "pred": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
-        }
-
+        result: dict[str, dict[str, list]] = {}
         for test_data in self.test_data_list:
             kind = test_data[kind_index]
             pesq = test_data[pesq_index]
@@ -820,6 +841,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
             estoi = test_data[estoi_index]
             wer = test_data[wer_index]
             utmos = test_data[utmos_index]
+            result[kind] = {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []}
             result[kind]["pesq"].append(pesq)
             result[kind]["stoi"].append(stoi)
             result[kind]["estoi"].append(estoi)

@@ -148,7 +148,7 @@ class Preprocessor:
 
         df_kmeans = self.df.copy()
 
-        # trainかつatrのみを利用
+        # kablabのtrainかつatrのみを利用
         df_kmeans = df_kmeans.loc[
             (df_kmeans["data_split"] == "train") & (df_kmeans["corpus"] == "ATR")
         ].reset_index(drop=True)
