@@ -171,7 +171,7 @@ class Generator(torch.nn.Module):
                 cfg.model.decoder.speech_ssl.n_clusters + 1,
                 cfg.model.hifigan.embedding_dim,
             )
-        model_in_dim += cfg.model.spk_emb_layer.dim
+        # model_in_dim += cfg.model.spk_emb_layer.dim
 
         self.num_kernels = len(cfg.model.hifigan.resblock_kernel_sizes)
         self.num_upsamples = len(cfg.model.hifigan.upsample_rates)
@@ -237,7 +237,7 @@ class Generator(torch.nn.Module):
                 )
             )
         x = torch.cat(features, dim=2).permute(0, 2, 1)  # (B, C, T)
-        x = torch.cat([x, spk_emb.unsqueeze(2).expand(-1, -1, x.shape[2])], dim=1)
+        # x = torch.cat([x, spk_emb.unsqueeze(2).expand(-1, -1, x.shape[2])], dim=1)
 
         x = self.conv_pre(x)
         for i in range(self.num_upsamples):
