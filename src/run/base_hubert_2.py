@@ -265,20 +265,25 @@ def main():
 
     for layer_index_cluster in layer_index_cluster_lst:
         for n_cluster in n_clusters_lst:
-            hifigan_checkpoint_path_jvs_mel = run_hifigan(
-                hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-                hifigan_input=["mel"],
-                layer_index_cluster=layer_index_cluster,
-                n_clusters=n_cluster,
-                debug=debug,
-            )
-            hifigan_checkpoint_path_jvs_mel_speech_ssl = run_hifigan(
-                hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-                hifigan_input=["mel", "hubert_layer_feature_cluster"],
-                layer_index_cluster=layer_index_cluster,
-                n_clusters=n_cluster,
-                debug=debug,
-            )
+            if layer_index_cluster == 8 and n_cluster == 100:
+                hifigan_checkpoint_path_jvs_mel = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20240924_041029/epoch:23-step:31152.ckpt"
+                hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20240924_222851/epoch:17-step:23364.ckpt"
+            else:
+                hifigan_checkpoint_path_jvs_mel = run_hifigan(
+                    hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+                    hifigan_input=["mel"],
+                    layer_index_cluster=layer_index_cluster,
+                    n_clusters=n_cluster,
+                    debug=debug,
+                )
+                hifigan_checkpoint_path_jvs_mel_speech_ssl = run_hifigan(
+                    hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+                    hifigan_input=["mel", "hubert_layer_feature_cluster"],
+                    layer_index_cluster=layer_index_cluster,
+                    n_clusters=n_cluster,
+                    debug=debug,
+                )
+
             for cluster_loss_weight in cluster_loss_weights:
                 avhubert_checkpoint_path = run_avhubert(
                     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
