@@ -820,7 +820,25 @@ class LitBaseHuBERT2Module(L.LightningModule):
         wer_index = self.test_data_columns.index("wer")
         utmos_index = self.test_data_columns.index("utmos")
 
-        result: dict[str, dict[str, list]] = {}
+        result: dict[str, dict[str, list]] = {
+            "gt": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
+            "pred_mel": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
+            "pred_mel_speech_ssl": {
+                "pesq": [],
+                "stoi": [],
+                "estoi": [],
+                "wer": [],
+                "utmos": [],
+            },
+            "abs_mel": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
+            "abs_mel_speech_ssl": {
+                "pesq": [],
+                "stoi": [],
+                "estoi": [],
+                "wer": [],
+                "utmos": [],
+            },
+        }
         for test_data in self.test_data_list:
             kind = test_data[kind_index]
             pesq = test_data[pesq_index]
@@ -828,7 +846,6 @@ class LitBaseHuBERT2Module(L.LightningModule):
             estoi = test_data[estoi_index]
             wer = test_data[wer_index]
             utmos = test_data[utmos_index]
-            result[kind] = {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []}
             result[kind]["pesq"].append(pesq)
             result[kind]["stoi"].append(stoi)
             result[kind]["estoi"].append(estoi)
