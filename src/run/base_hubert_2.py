@@ -173,6 +173,7 @@ def run_hubert(
             "training.loss_weights.ssl_feature_cluster_ensemble_loss=0.0",
             "training.finetune=true",
             f"training.finetune_start_model_path={str(finetune_start_model_path)}",
+            "training.optimizer.learning_rate=5.0e-4",
         ],
         lip2sp_checkpoint_dir,
     )
