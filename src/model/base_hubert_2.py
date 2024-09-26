@@ -3,7 +3,7 @@ import logging
 import omegaconf
 import torch
 import torch.nn as nn
-from transformers import AutoModel
+from transformers import AutoConfig, AutoModel
 
 from src.data_process.utils import get_upsample, get_upsample_speech_ssl
 from src.model.utils import load_avhubert
@@ -170,9 +170,16 @@ class SpeechSSLEncoder(nn.Module):
     def __init__(self, cfg: omegaconf.DictConfig, hidden_channels: int) -> None:
         super().__init__()
         self.cfg = cfg
-        self.ssl_model_encoder = AutoModel.from_pretrained(
-            cfg.model.decoder.speech_ssl.model_name
-        ).encoder
+
+        if cfg.model.decoder.speech_ssl.load_pretrained_weight:
+            self.ssl_model_encoder = AutoModel.from_pretrained(
+                cfg.model.decoder.speech_ssl.model_name
+            ).encoder
+        else:
+            self.ssl_model_encoder = AutoModel.from_config(
+                AutoConfig.from_pretrained(cfg.model.decoder.speech_ssl.model_name)
+            ).encoder
+
         self.conv = nn.Conv1d(
             hidden_channels, hidden_channels, kernel_size=3, stride=2, padding=1
         )

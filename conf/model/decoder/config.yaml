@@ -26,9 +26,8 @@ ensemble:
   num_layers: 4
 
 speech_ssl:
+  load_pretrained_weight: true
   model_name: "rinna/japanese-hubert-base"
-  # model_name: "rinna/japanese-wav2vec2-base"
-  # model_name: "rinna/japanese-data2vec-audio-base"
   conv_output_dim: 768
   encoder_output_dim: 768
   kmeans: kablab

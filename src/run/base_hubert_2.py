@@ -141,6 +141,7 @@ def run_hubert(
     partial_update_use: bool,
     partial_update_lower_or_upper: str,
     partial_udpate_thres: int,
+    speech_ssl_load_pretrained_weight: bool,
     lip2sp_checkpoint_dir: Path,
     finetune_start_model_path: Path,
     debug: bool,
@@ -163,6 +164,7 @@ def run_hubert(
             f"model.decoder.speech_ssl.partial_update.thres={partial_udpate_thres}",
             f"model.decoder.speech_ssl.layer_index_cluster={layer_index_cluster}",
             f"model.decoder.speech_ssl.n_clusters={n_clusters}",
+            f"model.decoder.speech_ssl.load_pretrained_weight={speech_ssl_load_pretrained_weight}",
             "training=base_hubert_2_debug" if debug else "training=base_hubert_2",
             "training.loss_weights.mel_loss=0.0",
             "training.loss_weights.ssl_conv_feature_loss=0.0",
@@ -296,31 +298,34 @@ def main():
                     lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
                     debug=debug,
                 )
-                hubert_checkpoint_path = run_hubert(
-                    hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
-                    hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
-                    freeze_pattern=freeze_patterns["train_hubert"],
-                    cluster_loss_weight=cluster_loss_weight,
-                    layer_index_cluster=layer_index_cluster,
-                    n_clusters=n_cluster,
-                    partial_update_use=False,
-                    partial_update_lower_or_upper="",
-                    partial_udpate_thres=0,
-                    lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-                    finetune_start_model_path=avhubert_checkpoint_path,
-                    debug=debug,
-                )
-                hubert_checkpoint_path = run_ensemble(
-                    hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
-                    hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
-                    freeze_pattern=freeze_patterns["train_ensemble"],
-                    cluster_loss_weight=cluster_loss_weight,
-                    layer_index_cluster=layer_index_cluster,
-                    n_clusters=n_cluster,
-                    lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-                    finetune_start_model_path=hubert_checkpoint_path,
-                    debug=debug,
-                )
+
+                for speech_ssl_load_pretrained_weight in [False, True]:
+                    hubert_checkpoint_path = run_hubert(
+                        hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
+                        hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
+                        freeze_pattern=freeze_patterns["train_hubert"],
+                        cluster_loss_weight=cluster_loss_weight,
+                        layer_index_cluster=layer_index_cluster,
+                        n_clusters=n_cluster,
+                        partial_update_use=False,
+                        partial_update_lower_or_upper="",
+                        partial_udpate_thres=0,
+                        speech_ssl_load_pretrained_weight=speech_ssl_load_pretrained_weight,
+                        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                        finetune_start_model_path=avhubert_checkpoint_path,
+                        debug=debug,
+                    )
+                    run_ensemble(
+                        hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
+                        hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
+                        freeze_pattern=freeze_patterns["train_ensemble"],
+                        cluster_loss_weight=cluster_loss_weight,
+                        layer_index_cluster=layer_index_cluster,
+                        n_clusters=n_cluster,
+                        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                        finetune_start_model_path=hubert_checkpoint_path,
+                        debug=debug,
+                    )
 
 
 if __name__ == "__main__":
