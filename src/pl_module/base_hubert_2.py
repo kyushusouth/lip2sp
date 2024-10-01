@@ -7,6 +7,7 @@ import MeCab
 import numpy as np
 import omegaconf
 import pandas as pd
+import polars as pl
 import torch
 import whisper
 from cosine_annealing_warmup import CosineAnnealingWarmupRestarts
@@ -588,6 +589,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
             "estoi",
             "wer",
             "utmos",
+            "spk_sim",
         ]
         self.test_data_list = []
 
@@ -595,13 +597,6 @@ class LitBaseHuBERT2Module(L.LightningModule):
         self.df_utt = pd.read_csv(str(csv_path))
         self.df_utt = self.df_utt.drop(columns=["index"])
         self.df_utt = self.df_utt.loc[self.df_utt["subset"] == "j"]
-
-        self.hifigan_mel = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
-            self.cfg.model.hifigan.model_path_mel,
-            cfg=self.cfg,
-            input_type=["mel"],
-        )
-        self.hifigan_mel.eval()
 
         self.hifigan_mel_speech_ssl = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
             self.cfg.model.hifigan.model_path_mel_speech_ssl,
@@ -685,8 +680,6 @@ class LitBaseHuBERT2Module(L.LightningModule):
             data=wav_eval.cpu().numpy(),
         )
 
-        utmos = self.calc_utmos(str(save_dir / f"{kind}.wav"))
-
         wandb_table_data.append(
             [
                 speaker,
@@ -697,7 +690,6 @@ class LitBaseHuBERT2Module(L.LightningModule):
                 stoi,
                 estoi,
                 word_error_rate,
-                utmos,
             ]
         )
 
@@ -732,61 +724,57 @@ class LitBaseHuBERT2Module(L.LightningModule):
             repeats=get_upsample_speech_ssl(self.cfg), dim=1
         )
 
-        (
-            pred_mel,
-            pred_ssl_conv_feature,
-            pred_ssl_feature_cluster,
-            pred_mel_speech_ssl,
-            pred_ssl_feature_cluster_speech_ssl,
-            pred_mel_ensemble,
-            pred_ssl_feature_cluster_ensemble,
-        ) = self.model(
-            lip=lip,
-            audio=None,
-            spk_emb=spk_emb,
-            padding_mask_lip=padding_mask_lip,
-            padding_mask_speech_ssl=~padding_mask_feature_speech_ssl,
-        )
+        with torch.no_grad():
+            (
+                pred_mel,
+                pred_ssl_conv_feature,
+                pred_ssl_feature_cluster,
+                pred_mel_speech_ssl,
+                pred_ssl_feature_cluster_speech_ssl,
+                pred_mel_ensemble,
+                pred_ssl_feature_cluster_ensemble,
+            ) = self.model(
+                lip=lip,
+                audio=None,
+                spk_emb=spk_emb,
+                padding_mask_lip=padding_mask_lip,
+                padding_mask_speech_ssl=~padding_mask_feature_speech_ssl,
+            )
 
-        inputs_dict_gt = self.hifigan_mel.prepare_inputs_dict(
+        inputs_dict_gt = self.hifigan_mel_speech_ssl.prepare_inputs_dict(
             feature, hubert_layer_feature_cluster
         )
 
         if self.cfg.model.decoder.vocoder_input == "avhubert":
-            inputs_dict_pred = self.hifigan_mel.prepare_inputs_dict(
+            inputs_dict_pred = self.hifigan_mel_speech_ssl.prepare_inputs_dict(
                 pred_mel, pred_ssl_feature_cluster.argmax(dim=1)
             )
         elif self.cfg.model.decoder.vocoder_input == "speech_ssl":
-            inputs_dict_pred = self.hifigan_mel.prepare_inputs_dict(
+            inputs_dict_pred = self.hifigan_mel_speech_ssl.prepare_inputs_dict(
                 pred_mel_speech_ssl, pred_ssl_feature_cluster_speech_ssl.argmax(dim=1)
             )
         elif self.cfg.model.decoder.vocoder_input == "ensemble":
-            inputs_dict_pred = self.hifigan_mel.prepare_inputs_dict(
+            inputs_dict_pred = self.hifigan_mel_speech_ssl.prepare_inputs_dict(
                 pred_mel_ensemble, pred_ssl_feature_cluster_ensemble.argmax(dim=1)
             )
 
-        wav_pred_mel = self.hifigan_mel.gen(inputs_dict_pred, spk_emb)
-        wav_pred_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
-            inputs_dict_pred, spk_emb
-        )
-        wav_abs_mel = self.hifigan_mel.gen(inputs_dict_gt, spk_emb)
-        wav_abs_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
-            inputs_dict_gt, spk_emb
-        )
+        with torch.no_grad():
+            wav_pred_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
+                inputs_dict_pred, spk_emb
+            )
+            wav_abs_mel_speech_ssl = self.hifigan_mel_speech_ssl.gen(
+                inputs_dict_gt, spk_emb
+            )
 
         wav_eval_dct = {
             "gt": wav_gt,
-            "pred_mel": wav_pred_mel,
             "pred_mel_speech_ssl": wav_pred_mel_speech_ssl,
-            "abs_mel": wav_abs_mel,
             "abs_mel_speech_ssl": wav_abs_mel_speech_ssl,
         }
 
         n_sample_min = min(
             wav_gt.shape[-1],
-            wav_abs_mel.shape[-1],
             wav_abs_mel_speech_ssl.shape[-1],
-            wav_pred_mel.shape[-1],
             wav_pred_mel_speech_ssl.shape[-1],
         )
 
@@ -810,6 +798,62 @@ class LitBaseHuBERT2Module(L.LightningModule):
         self.test_data_list += wandb_table_data
 
     def on_test_end(self) -> None:
+        save_dir = Path(
+            str(Path(self.cfg.training.checkpoints_save_dir)).replace(
+                "checkpoints", "results"
+            )
+        )
+
+        subprocess.run(
+            [
+                "/home/minami/UTMOS-demo/.venv/bin/python",
+                "/home/minami/UTMOS-demo/predict.py",
+                "--ckpt_path",
+                "/home/minami/UTMOS-demo/epoch=3-step=7459.ckpt",
+                "--mode",
+                "predict_dir",
+                "--inp_dir",
+                str(save_dir),
+                "--out_path",
+                str(save_dir / "utmos.csv"),
+            ],
+        )
+        df_utmos = pl.read_csv(str(save_dir / "utmos.csv"))
+        for i in range(len(self.test_data_list)):
+            speaker = self.test_data_list[i][0]
+            filename = self.test_data_list[i][1]
+            kind = self.test_data_list[i][2]
+            utmos = df_utmos.filter(
+                (pl.col("speaker") == speaker)
+                & (pl.col("filename") == filename)
+                & (pl.col("kind") == kind)
+            )
+            assert utmos.shape[0] == 1, "UTMOS should have only one value."
+            self.test_data_list[i].append(utmos["score"][0])
+
+        subprocess.run(
+            [
+                "/home/minami/Resemblyzer/.venv/bin/python",
+                "/home/minami/Resemblyzer/calc_cossim.py",
+                "--inp_dir",
+                str(save_dir),
+                "--out_path",
+                str(save_dir / "spk_sim.csv"),
+            ],
+        )
+        df_spk_sim = pl.read_csv(str(save_dir / "spk_sim.csv"))
+        for i in range(len(self.test_data_list)):
+            speaker = self.test_data_list[i][0]
+            filename = self.test_data_list[i][1]
+            kind = self.test_data_list[i][2]
+            spk_sim = df_spk_sim.filter(
+                (pl.col("speaker") == speaker)
+                & (pl.col("filename") == filename)
+                & (pl.col("kind") == kind)
+            )
+            assert spk_sim.shape[0] == 1, "spk_sim should have only one value."
+            self.test_data_list[i].append(spk_sim["score"][0])
+
         table = wandb.Table(columns=self.test_data_columns, data=self.test_data_list)
         wandb.log({"test_data": table})
 
@@ -819,26 +863,23 @@ class LitBaseHuBERT2Module(L.LightningModule):
         estoi_index = self.test_data_columns.index("estoi")
         wer_index = self.test_data_columns.index("wer")
         utmos_index = self.test_data_columns.index("utmos")
+        spk_sim_index = self.test_data_columns.index("spk_sim")
 
-        result: dict[str, dict[str, list]] = {
-            "gt": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
-            "pred_mel": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
-            "pred_mel_speech_ssl": {
+        kinds = set()
+        for i in range(len(self.test_data_list)):
+            kinds.add(self.test_data_list[i][kind_index])
+
+        result = {}
+        for kind in kinds:
+            result[kind] = {
                 "pesq": [],
                 "stoi": [],
                 "estoi": [],
                 "wer": [],
                 "utmos": [],
-            },
-            "abs_mel": {"pesq": [], "stoi": [], "estoi": [], "wer": [], "utmos": []},
-            "abs_mel_speech_ssl": {
-                "pesq": [],
-                "stoi": [],
-                "estoi": [],
-                "wer": [],
-                "utmos": [],
-            },
-        }
+                "spk_sim": [],
+            }
+
         for test_data in self.test_data_list:
             kind = test_data[kind_index]
             pesq = test_data[pesq_index]
@@ -846,13 +887,15 @@ class LitBaseHuBERT2Module(L.LightningModule):
             estoi = test_data[estoi_index]
             wer = test_data[wer_index]
             utmos = test_data[utmos_index]
+            spk_sim = test_data[spk_sim_index]
             result[kind]["pesq"].append(pesq)
             result[kind]["stoi"].append(stoi)
             result[kind]["estoi"].append(estoi)
             result[kind]["wer"].append(wer)
             result[kind]["utmos"].append(utmos)
+            result[kind]["spk_sim"].append(spk_sim)
 
-        columns = ["kind", "pesq", "stoi", "estoi", "wer", "utmos"]
+        columns = ["kind", "pesq", "stoi", "estoi", "wer", "utmos", "spk_sim"]
         data_list = []
         for kind, value_dict in result.items():
             if kind == "gt":
@@ -864,6 +907,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
                         None,
                         np.mean(value_dict["wer"]),
                         np.mean(value_dict["utmos"]),
+                        np.mean(value_dict["spk_sim"]),
                     ]
                 )
             else:
@@ -875,6 +919,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
                         np.mean(value_dict["estoi"]),
                         np.mean(value_dict["wer"]),
                         np.mean(value_dict["utmos"]),
+                        np.mean(value_dict["spk_sim"]),
                     ]
                 )
         table = wandb.Table(columns=columns, data=data_list)
@@ -894,24 +939,6 @@ class LitBaseHuBERT2Module(L.LightningModule):
         except:  # noqa: E722
             wer_gt = 1.0
         return wer_gt
-
-    def calc_utmos(self, path: str) -> float:
-        utmos = subprocess.run(
-            [
-                "/home/minami/UTMOS-demo/.venv/bin/python",
-                "/home/minami/UTMOS-demo/predict.py",
-                "--ckpt_path",
-                "/home/minami/UTMOS-demo/epoch=3-step=7459.ckpt",
-                "--mode",
-                "predict_file",
-                "--inp_path",
-                path,
-            ],
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-        utmos = float(utmos)
-        return utmos
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
