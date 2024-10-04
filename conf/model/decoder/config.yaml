@@ -1,3 +1,5 @@
+type: convres
+
 conv:
   n_conv_layers: 3
   conv_kernel_size: 3

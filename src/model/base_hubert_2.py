@@ -12,6 +12,135 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+class ResBlock(nn.Module):
+    def __init__(self, cfg: omegaconf.DictConfig, hidden_channels: int) -> None:
+        super().__init__()
+        padding = (cfg.model.decoder.conv.conv_kernel_size - 1) // 2
+        self.conv_layers = nn.Sequential(
+            nn.Conv1d(
+                hidden_channels,
+                hidden_channels,
+                kernel_size=cfg.model.decoder.conv.conv_kernel_size,
+                stride=1,
+                padding=padding,
+            ),
+            nn.BatchNorm1d(hidden_channels),
+            nn.ReLU(),
+            nn.Dropout(cfg.model.decoder.conv.dropout),
+            nn.Conv1d(
+                hidden_channels,
+                hidden_channels,
+                kernel_size=cfg.model.decoder.conv.conv_kernel_size,
+                stride=1,
+                padding=padding,
+            ),
+            nn.BatchNorm1d(hidden_channels),
+            nn.ReLU(),
+            nn.Dropout(cfg.model.decoder.conv.dropout),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        res = x
+        out = self.conv_layers(x)
+        return out + res
+
+
+class ConvResDecoder(nn.Module):
+    def __init__(
+        self,
+        cfg: omegaconf.DictConfig,
+        hidden_channels: int,
+        pred_ssl_conv_feature: bool,
+    ) -> None:
+        super().__init__()
+        self.cfg = cfg
+        self.pred_ssl_conv_feature = pred_ssl_conv_feature
+
+        conv_layers = []
+        for i in range(cfg.model.decoder.conv.n_conv_layers):
+            conv_layers.append(
+                ResBlock(
+                    cfg=cfg,
+                    hidden_channels=hidden_channels,
+                )
+            )
+        self.conv_layers = nn.ModuleList(conv_layers)
+
+        self.out_layer_mel = nn.Conv1d(
+            hidden_channels,
+            cfg.data.audio.n_mels * get_upsample(cfg),
+            kernel_size=1,
+        )
+        self.out_layer_ssl_feature_cluster = nn.Conv1d(
+            hidden_channels,
+            (cfg.model.decoder.speech_ssl.n_clusters + 1)
+            * get_upsample_speech_ssl(cfg),
+            kernel_size=1,
+        )
+
+        if pred_ssl_conv_feature:
+            self.out_layer_ssl_conv_feature = nn.Conv1d(
+                hidden_channels,
+                cfg.model.decoder.speech_ssl.encoder_output_dim
+                * get_upsample_speech_ssl(cfg),
+                kernel_size=1,
+            )
+
+        if cfg.model.spk_emb_layer.use:
+            self.spk_emb_layer = nn.Linear(
+                hidden_channels + cfg.model.spk_emb_layer.dim,
+                hidden_channels,
+            )
+
+    def forward(self, feature: torch.Tensor, spk_emb: torch.Tensor) -> torch.Tensor:
+        """
+        args:
+            feature: (B, T, C)
+            spk_emb: (B, C)
+        returns:
+            pred_mel: (B, C, T)
+            pred_ssl_conv_feature: (B, C, T)
+            pred_ssl_feature_cluster: (B, T, C)
+        """
+        if self.cfg.model.spk_emb_layer.use:
+            spk_emb_expand = spk_emb.unsqueeze(1).expand(
+                -1, feature.shape[1], -1
+            )  # (B, T, C)
+            feature = torch.cat([feature, spk_emb_expand], dim=-1)
+            feature = self.spk_emb_layer(feature)
+
+        feature = feature.permute(0, 2, 1)
+        for layer in self.conv_layers:
+            feature = layer(feature)
+
+        pred_mel = self.out_layer_mel(feature)
+        pred_mel = pred_mel.permute(0, 2, 1)  # (B, T, C)
+        pred_mel = pred_mel.reshape(pred_mel.shape[0], -1, self.cfg.data.audio.n_mels)
+        pred_mel = pred_mel.permute(0, 2, 1)  # (B, C, T)
+
+        pred_ssl_feature_cluster = self.out_layer_ssl_feature_cluster(feature)
+        pred_ssl_feature_cluster = pred_ssl_feature_cluster.permute(
+            0, 2, 1
+        )  # (B, T, C)
+
+        if self.pred_ssl_conv_feature:
+            pred_ssl_conv_feature = self.out_layer_ssl_conv_feature(
+                feature
+            )  # (B, C, T)
+            pred_ssl_conv_feature = pred_ssl_conv_feature.permute(0, 2, 1)  # (B, T, C)
+            pred_ssl_conv_feature = pred_ssl_conv_feature.reshape(
+                pred_ssl_conv_feature.shape[0],
+                -1,
+                self.cfg.model.decoder.speech_ssl.encoder_output_dim,
+            )
+            pred_ssl_conv_feature = pred_ssl_conv_feature.permute(0, 2, 1)  # (B, C, T)
+
+        if self.pred_ssl_conv_feature:
+            return pred_mel, pred_ssl_feature_cluster, pred_ssl_conv_feature
+
+        return pred_mel, pred_ssl_feature_cluster
+
+
 class ConvDecoder(nn.Module):
     def __init__(
         self,
@@ -121,7 +250,7 @@ class Decoders(nn.Module):
                 )
         else:
             pred_mel = self.mel_decoder(feature)
-            if self.ssl_conv_feature_decoder:
+            if self.pred_ssl_conv_feature:
                 pred_ssl_conv_feature = self.ssl_conv_feature_decoder(feature)
 
         pred_ssl_feature_cluster = self.ssl_feature_cluster_decoder(feature)
@@ -211,26 +340,29 @@ class BaseHuBERT2Model(nn.Module):
 
         self.avhubert = load_avhubert(cfg)
         hidden_channels = self.avhubert.encoder_embed_dim
-
-        self.decoders_avhubert = Decoders(
-            cfg, hidden_channels, pred_ssl_conv_feature=True
-        )
-
         self.ssl_model_encoder = SpeechSSLEncoder(cfg, hidden_channels)
-
-        self.decoders_hubert = Decoders(
-            cfg,
-            hidden_channels,
-            pred_ssl_conv_feature=False,
-        )
-
         self.ensemble_encoder = EnsembleEncoder(cfg, hidden_channels)
 
-        self.decoders_ensemble = Decoders(
-            cfg,
-            hidden_channels,
-            pred_ssl_conv_feature=False,
-        )
+        if cfg.model.decoder.type == "convres":
+            self.decoders_avhubert = ConvResDecoder(
+                cfg, hidden_channels, pred_ssl_conv_feature=True
+            )
+            self.decoders_hubert = ConvResDecoder(
+                cfg, hidden_channels, pred_ssl_conv_feature=False
+            )
+            self.decoders_ensemble = ConvResDecoder(
+                cfg, hidden_channels, pred_ssl_conv_feature=False
+            )
+        elif cfg.model.decoder.type == "base":
+            self.decoders_avhubert = Decoders(
+                cfg, hidden_channels, pred_ssl_conv_feature=True
+            )
+            self.decoders_hubert = Decoders(
+                cfg, hidden_channels, pred_ssl_conv_feature=False
+            )
+            self.decoders_ensemble = Decoders(
+                cfg, hidden_channels, pred_ssl_conv_feature=False
+            )
 
     def extract_feature_avhubert(
         self,

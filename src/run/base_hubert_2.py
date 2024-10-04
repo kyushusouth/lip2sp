@@ -268,14 +268,18 @@ def main():
 
     for layer_index_cluster in layer_index_cluster_lst:
         for n_cluster in n_clusters_lst:
-            hifigan_checkpoint_path_jvs_mel = None
-            hifigan_checkpoint_path_jvs_mel_speech_ssl = run_hifigan(
-                hifigan_checkpoint_dir=hifigan_checkpoint_dir,
-                hifigan_input=["mel", "hubert_layer_feature_cluster"],
-                layer_index_cluster=layer_index_cluster,
-                n_clusters=n_cluster,
-                debug=debug,
-            )
+            if layer_index_cluster == 8 and n_cluster == 100:
+                hifigan_checkpoint_path_jvs_mel = None
+                hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241002_115640/epoch:15-step:20768.ckpt"
+            else:
+                hifigan_checkpoint_path_jvs_mel = None
+                hifigan_checkpoint_path_jvs_mel_speech_ssl = run_hifigan(
+                    hifigan_checkpoint_dir=hifigan_checkpoint_dir,
+                    hifigan_input=["mel", "hubert_layer_feature_cluster"],
+                    layer_index_cluster=layer_index_cluster,
+                    n_clusters=n_cluster,
+                    debug=debug,
+                )
 
             for cluster_loss_weight in cluster_loss_weights:
                 avhubert_checkpoint_path = run_avhubert(
