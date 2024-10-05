@@ -264,7 +264,7 @@ def main():
     }
     layer_index_cluster_lst = [8]
     n_clusters_lst = [100]
-    cluster_loss_weights = [0.0001, 0.001, 0.01, 0.1, 1.0]
+    cluster_loss_weights = [0.1, 1.0]
 
     for layer_index_cluster in layer_index_cluster_lst:
         for n_cluster in n_clusters_lst:
