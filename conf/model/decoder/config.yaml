@@ -1,4 +1,4 @@
-type: convres
+type: base
 
 conv:
   n_conv_layers: 3
