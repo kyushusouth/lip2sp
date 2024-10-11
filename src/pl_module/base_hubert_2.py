@@ -644,29 +644,29 @@ class LitBaseHuBERT2Module(L.LightningModule):
         wav_eval = self.process_wav(wav_eval, n_sample_min)
         wav_gt = self.process_wav(wav_gt, n_sample_min)
 
-        if kind == "gt":
-            pesq, stoi, estoi = None, None, None
-        else:
-            pesq = self.wb_pesq_evaluator(wav_eval, wav_gt)
-            stoi = self.stoi_evaluator(wav_eval, wav_gt)
-            estoi = self.estoi_evaluator(wav_eval, wav_gt)
+        # if kind == "gt":
+        #     pesq, stoi, estoi = None, None, None
+        # else:
+        #     pesq = self.wb_pesq_evaluator(wav_eval, wav_gt)
+        #     stoi = self.stoi_evaluator(wav_eval, wav_gt)
+        #     estoi = self.estoi_evaluator(wav_eval, wav_gt)
 
-        utt_recog = (
-            self.speech_recognizer.transcribe(
-                wav_eval.to(dtype=torch.float32), language="ja"
-            )["text"]
-            .replace("。", "")
-            .replace("、", "")
-        )
+        # utt_recog = (
+        #     self.speech_recognizer.transcribe(
+        #         wav_eval.to(dtype=torch.float32), language="ja"
+        #     )["text"]
+        #     .replace("。", "")
+        #     .replace("、", "")
+        # )
 
-        utt_parse = self.mecab.parse(utt)
-        utt_recog_parse = self.mecab.parse(utt_recog)
-        word_error_rate = self.calc_error_rate(utt_parse, utt_recog_parse)
+        # utt_parse = self.mecab.parse(utt)
+        # utt_recog_parse = self.mecab.parse(utt_recog)
+        # word_error_rate = self.calc_error_rate(utt_parse, utt_recog_parse)
 
         save_dir = (
             Path(
                 str(Path(self.cfg.training.checkpoints_save_dir)).replace(
-                    "checkpoints", "results"
+                    "checkpoints", "results_val"
                 )
             )
             / speaker
@@ -680,18 +680,18 @@ class LitBaseHuBERT2Module(L.LightningModule):
             data=wav_eval.cpu().numpy(),
         )
 
-        wandb_table_data.append(
-            [
-                speaker,
-                filename,
-                kind,
-                wandb.Audio(wav_eval.cpu(), sample_rate=self.cfg.data.audio.sr),
-                pesq,
-                stoi,
-                estoi,
-                word_error_rate,
-            ]
-        )
+        # wandb_table_data.append(
+        #     [
+        #         speaker,
+        #         filename,
+        #         kind,
+        #         wandb.Audio(wav_eval.cpu(), sample_rate=self.cfg.data.audio.sr),
+        #         pesq,
+        #         stoi,
+        #         estoi,
+        #         word_error_rate,
+        #     ]
+        # )
 
     def test_step(self, batch: list, batch_index: int) -> None:
         (
@@ -778,9 +778,9 @@ class LitBaseHuBERT2Module(L.LightningModule):
             wav_pred_mel_speech_ssl.shape[-1],
         )
 
-        for i, row in self.df_utt.iterrows():
-            if str(row["utt_num"]) in filename[0]:
-                utt = row["text"].replace("。", "").replace("、", "")
+        # for i, row in self.df_utt.iterrows():
+        #     if str(row["utt_num"]) in filename[0]:
+        #         utt = row["text"].replace("。", "").replace("、", "")
 
         wandb_table_data = []
         for wav_eval_kind, wav_eval in wav_eval_dct.items():
@@ -788,7 +788,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
                 wav_eval=wav_eval,
                 wav_gt=wav_gt,
                 n_sample_min=n_sample_min,
-                utt=utt,
+                utt=None,
                 speaker=speaker[0],
                 filename=filename[0],
                 kind=wav_eval_kind,
@@ -797,133 +797,133 @@ class LitBaseHuBERT2Module(L.LightningModule):
 
         self.test_data_list += wandb_table_data
 
-    def on_test_end(self) -> None:
-        save_dir = Path(
-            str(Path(self.cfg.training.checkpoints_save_dir)).replace(
-                "checkpoints", "results"
-            )
-        )
+    # def on_test_end(self) -> None:
+    #     save_dir = Path(
+    #         str(Path(self.cfg.training.checkpoints_save_dir)).replace(
+    #             "checkpoints", "results_val"
+    #         )
+    #     )
 
-        subprocess.run(
-            [
-                "/home/minami/UTMOS-demo/.venv/bin/python",
-                "/home/minami/UTMOS-demo/predict.py",
-                "--ckpt_path",
-                "/home/minami/UTMOS-demo/epoch=3-step=7459.ckpt",
-                "--mode",
-                "predict_dir",
-                "--inp_dir",
-                str(save_dir),
-                "--out_path",
-                str(save_dir / "utmos.csv"),
-            ],
-        )
-        df_utmos = pl.read_csv(str(save_dir / "utmos.csv"))
-        for i in range(len(self.test_data_list)):
-            speaker = self.test_data_list[i][0]
-            filename = self.test_data_list[i][1]
-            kind = self.test_data_list[i][2]
-            utmos = df_utmos.filter(
-                (pl.col("speaker") == speaker)
-                & (pl.col("filename") == filename)
-                & (pl.col("kind") == kind)
-            )
-            assert utmos.shape[0] == 1, "UTMOS should have only one value."
-            self.test_data_list[i].append(utmos["score"][0])
+    #     subprocess.run(
+    #         [
+    #             "/home/minami/UTMOS-demo/.venv/bin/python",
+    #             "/home/minami/UTMOS-demo/predict.py",
+    #             "--ckpt_path",
+    #             "/home/minami/UTMOS-demo/epoch=3-step=7459.ckpt",
+    #             "--mode",
+    #             "predict_dir",
+    #             "--inp_dir",
+    #             str(save_dir),
+    #             "--out_path",
+    #             str(save_dir / "utmos.csv"),
+    #         ],
+    #     )
+    #     df_utmos = pl.read_csv(str(save_dir / "utmos.csv"))
+    #     for i in range(len(self.test_data_list)):
+    #         speaker = self.test_data_list[i][0]
+    #         filename = self.test_data_list[i][1]
+    #         kind = self.test_data_list[i][2]
+    #         utmos = df_utmos.filter(
+    #             (pl.col("speaker") == speaker)
+    #             & (pl.col("filename") == filename)
+    #             & (pl.col("kind") == kind)
+    #         )
+    #         assert utmos.shape[0] == 1, "UTMOS should have only one value."
+    #         self.test_data_list[i].append(utmos["score"][0])
 
-        subprocess.run(
-            [
-                "/home/minami/Resemblyzer/.venv/bin/python",
-                "/home/minami/Resemblyzer/calc_cossim.py",
-                "--inp_dir",
-                str(save_dir),
-                "--out_path",
-                str(save_dir / "spk_sim.csv"),
-            ],
-        )
-        df_spk_sim = pl.read_csv(str(save_dir / "spk_sim.csv"))
-        for i in range(len(self.test_data_list)):
-            speaker = self.test_data_list[i][0]
-            filename = self.test_data_list[i][1]
-            kind = self.test_data_list[i][2]
-            spk_sim = df_spk_sim.filter(
-                (pl.col("speaker") == speaker)
-                & (pl.col("filename") == filename)
-                & (pl.col("kind") == kind)
-            )
-            assert spk_sim.shape[0] == 1, "spk_sim should have only one value."
-            self.test_data_list[i].append(spk_sim["score"][0])
+    #     subprocess.run(
+    #         [
+    #             "/home/minami/Resemblyzer/.venv/bin/python",
+    #             "/home/minami/Resemblyzer/calc_cossim.py",
+    #             "--inp_dir",
+    #             str(save_dir),
+    #             "--out_path",
+    #             str(save_dir / "spk_sim.csv"),
+    #         ],
+    #     )
+    #     df_spk_sim = pl.read_csv(str(save_dir / "spk_sim.csv"))
+    #     for i in range(len(self.test_data_list)):
+    #         speaker = self.test_data_list[i][0]
+    #         filename = self.test_data_list[i][1]
+    #         kind = self.test_data_list[i][2]
+    #         spk_sim = df_spk_sim.filter(
+    #             (pl.col("speaker") == speaker)
+    #             & (pl.col("filename") == filename)
+    #             & (pl.col("kind") == kind)
+    #         )
+    #         assert spk_sim.shape[0] == 1, "spk_sim should have only one value."
+    #         self.test_data_list[i].append(spk_sim["score"][0])
 
-        table = wandb.Table(columns=self.test_data_columns, data=self.test_data_list)
-        wandb.log({"test_data": table})
+    #     table = wandb.Table(columns=self.test_data_columns, data=self.test_data_list)
+    #     wandb.log({"test_data": table})
 
-        kind_index = self.test_data_columns.index("kind")
-        pesq_index = self.test_data_columns.index("pesq")
-        stoi_index = self.test_data_columns.index("stoi")
-        estoi_index = self.test_data_columns.index("estoi")
-        wer_index = self.test_data_columns.index("wer")
-        utmos_index = self.test_data_columns.index("utmos")
-        spk_sim_index = self.test_data_columns.index("spk_sim")
+    #     kind_index = self.test_data_columns.index("kind")
+    #     pesq_index = self.test_data_columns.index("pesq")
+    #     stoi_index = self.test_data_columns.index("stoi")
+    #     estoi_index = self.test_data_columns.index("estoi")
+    #     wer_index = self.test_data_columns.index("wer")
+    #     utmos_index = self.test_data_columns.index("utmos")
+    #     spk_sim_index = self.test_data_columns.index("spk_sim")
 
-        kinds = set()
-        for i in range(len(self.test_data_list)):
-            kinds.add(self.test_data_list[i][kind_index])
+    #     kinds = set()
+    #     for i in range(len(self.test_data_list)):
+    #         kinds.add(self.test_data_list[i][kind_index])
 
-        result = {}
-        for kind in kinds:
-            result[kind] = {
-                "pesq": [],
-                "stoi": [],
-                "estoi": [],
-                "wer": [],
-                "utmos": [],
-                "spk_sim": [],
-            }
+    #     result = {}
+    #     for kind in kinds:
+    #         result[kind] = {
+    #             "pesq": [],
+    #             "stoi": [],
+    #             "estoi": [],
+    #             "wer": [],
+    #             "utmos": [],
+    #             "spk_sim": [],
+    #         }
 
-        for test_data in self.test_data_list:
-            kind = test_data[kind_index]
-            pesq = test_data[pesq_index]
-            stoi = test_data[stoi_index]
-            estoi = test_data[estoi_index]
-            wer = test_data[wer_index]
-            utmos = test_data[utmos_index]
-            spk_sim = test_data[spk_sim_index]
-            result[kind]["pesq"].append(pesq)
-            result[kind]["stoi"].append(stoi)
-            result[kind]["estoi"].append(estoi)
-            result[kind]["wer"].append(wer)
-            result[kind]["utmos"].append(utmos)
-            result[kind]["spk_sim"].append(spk_sim)
+    #     for test_data in self.test_data_list:
+    #         kind = test_data[kind_index]
+    #         pesq = test_data[pesq_index]
+    #         stoi = test_data[stoi_index]
+    #         estoi = test_data[estoi_index]
+    #         wer = test_data[wer_index]
+    #         utmos = test_data[utmos_index]
+    #         spk_sim = test_data[spk_sim_index]
+    #         result[kind]["pesq"].append(pesq)
+    #         result[kind]["stoi"].append(stoi)
+    #         result[kind]["estoi"].append(estoi)
+    #         result[kind]["wer"].append(wer)
+    #         result[kind]["utmos"].append(utmos)
+    #         result[kind]["spk_sim"].append(spk_sim)
 
-        columns = ["kind", "pesq", "stoi", "estoi", "wer", "utmos", "spk_sim"]
-        data_list = []
-        for kind, value_dict in result.items():
-            if kind == "gt":
-                data_list.append(
-                    [
-                        kind,
-                        None,
-                        None,
-                        None,
-                        np.mean(value_dict["wer"]),
-                        np.mean(value_dict["utmos"]),
-                        np.mean(value_dict["spk_sim"]),
-                    ]
-                )
-            else:
-                data_list.append(
-                    [
-                        kind,
-                        np.mean(value_dict["pesq"]),
-                        np.mean(value_dict["stoi"]),
-                        np.mean(value_dict["estoi"]),
-                        np.mean(value_dict["wer"]),
-                        np.mean(value_dict["utmos"]),
-                        np.mean(value_dict["spk_sim"]),
-                    ]
-                )
-        table = wandb.Table(columns=columns, data=data_list)
-        wandb.log({"metrics_mean": table})
+    #     columns = ["kind", "pesq", "stoi", "estoi", "wer", "utmos", "spk_sim"]
+    #     data_list = []
+    #     for kind, value_dict in result.items():
+    #         if kind == "gt":
+    #             data_list.append(
+    #                 [
+    #                     kind,
+    #                     None,
+    #                     None,
+    #                     None,
+    #                     np.mean(value_dict["wer"]),
+    #                     np.mean(value_dict["utmos"]),
+    #                     np.mean(value_dict["spk_sim"]),
+    #                 ]
+    #             )
+    #         else:
+    #             data_list.append(
+    #                 [
+    #                     kind,
+    #                     np.mean(value_dict["pesq"]),
+    #                     np.mean(value_dict["stoi"]),
+    #                     np.mean(value_dict["estoi"]),
+    #                     np.mean(value_dict["wer"]),
+    #                     np.mean(value_dict["utmos"]),
+    #                     np.mean(value_dict["spk_sim"]),
+    #                 ]
+    #             )
+    #     table = wandb.Table(columns=columns, data=data_list)
+    #     wandb.log({"metrics_mean": table})
 
     def process_wav(self, wav: torch.Tensor, n_sample: int) -> torch.Tensor:
         wav = wav.to(torch.float32)

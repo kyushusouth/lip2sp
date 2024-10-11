@@ -9,8 +9,8 @@ embedding_dim: 128
 model_path:
 model_path_mel:
 model_path_speech_ssl:
-model_path_mel_speech_ssl:
-freeze: false
+model_path_mel_speech_ssl: "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241002_115640/epoch:15-step:20768.ckpt"
+freeze: true
 loss:
   n_mels: 80
   n_fft: 1024

@@ -156,7 +156,7 @@ class BaseHuBERT2DataModule(L.LightningDataModule):
         if stage == "test":
             self.test_dataset = BaseHuBERT2Dataset(
                 cfg=self.cfg,
-                data_path_list=test_data_path_list,
+                data_path_list=val_data_path_list,
                 transform=BaseHuBERT2Transform(self.cfg, "test"),
             )
 
