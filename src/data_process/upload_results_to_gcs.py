@@ -45,7 +45,7 @@ def upload_directory_with_transfer_manager(
 
     # Filter so the list only includes files, not directories themselves.
     x = [
-        # "20241007_023651",
+        "20241007_023651",
         "20241005_134056",
         "20241005_150112",
         "20241005_155146",
