@@ -83,7 +83,7 @@ def main():
     upload_directory_with_transfer_manager(
         project="subjective-evaluation-test",
         bucket_name="subjective-evaluation-test-2-original-data",
-        source_directory="/home/minami/lip2sp/results",
+        source_directory="/home/minami/lip2sp/results_val",
         workers=16,
     )
 
