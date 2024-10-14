@@ -239,24 +239,18 @@ class Generator(torch.nn.Module):
         x = torch.cat(features, dim=2).permute(0, 2, 1)  # (B, C, T)
 
         x = self.conv_pre(x)
-        # print(f"{x.shape=}")
         for i in range(self.num_upsamples):
-            # print(f"upsample_index={i}")
             x = F.leaky_relu(x, LRELU_SLOPE)
             x = self.ups[i](x)
-            # print(f"{x.shape=}")
             xs = None
             for j in range(self.num_kernels):
                 if xs is None:
                     xs = self.resblocks[i * self.num_kernels + j](x)
                 else:
                     xs += self.resblocks[i * self.num_kernels + j](x)
-                # print(f"{i * self.num_kernels + j}, {xs.shape=}")
             x = xs / self.num_kernels
-            # print(f"{x.shape=}")
         x = F.leaky_relu(x)
         x = self.conv_post(x)
-        # print(f"{x.shape=}")
         x = torch.tanh(x)
         return x
 
