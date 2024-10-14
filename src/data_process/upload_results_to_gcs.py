@@ -50,6 +50,7 @@ def upload_directory_with_transfer_manager(
         "20241005_150112",
         "20241005_155146",
         "20241005_164631",
+        "20241006_222745",
     ]
     file_paths = [
         path for path in paths if path.is_file() and path.parents[2].name in x
