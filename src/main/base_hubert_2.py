@@ -84,23 +84,23 @@ def main(cfg: omegaconf.DictConfig) -> None:
         num_sanity_val_steps=0,
     )
 
-    # if cfg.training.resume:
-    #     trainer.fit(
-    #         model=model,
-    #         datamodule=datamodule,
-    #         ckpt_path=cfg.training.resume_checkpoint_path,
-    #     )
-    # else:
-    #     trainer.fit(
-    #         model=model,
-    #         datamodule=datamodule,
-    #     )
+    if cfg.training.resume:
+        trainer.fit(
+            model=model,
+            datamodule=datamodule,
+            ckpt_path=cfg.training.resume_checkpoint_path,
+        )
+    else:
+        trainer.fit(
+            model=model,
+            datamodule=datamodule,
+        )
 
-    # trainer.test(
-    #     model=model,
-    #     datamodule=datamodule,
-    #     ckpt_path="best",
-    # )
+    trainer.test(
+        model=model,
+        datamodule=datamodule,
+        ckpt_path="best",
+    )
 
     trainer.test(
         model=model,
