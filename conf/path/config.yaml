@@ -1,6 +1,8 @@
 kablab:
   audio_dir: "~/dataset/lip/wav"
+  audio_cut_silence_dir: "~/dataset/lip/wav_cut_silence" 
   video_dir: "~/dataset/lip/avhubert_preprocess_fps25"
+  video_cut_silence_dir: "~/dataset/lip/avhubert_preprocess_fps25_cut_silence"
   hubert_feature_prj_output_dir: "~/dataset/lip/hubert/feature_prj_output"
   hubert_encoder_output_dir: "~/dataset/lip/hubert/encoder_output"
   hubert_cluster_dir: "~/dataset/lip/hubert/cluster_fix"

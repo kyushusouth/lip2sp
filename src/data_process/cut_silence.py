@@ -8,6 +8,10 @@ from tqdm import tqdm
 
 
 def process(src_path: Path, dest_path: Path) -> None:
+    """
+    無音区間の除去
+    除去対象は区間内すべて
+    """
     sound = pydub.AudioSegment.from_file(str(src_path))
     chunks = pydub.silence.split_on_silence(
         sound, min_silence_len=500, silence_thresh=-40, keep_silence=100
