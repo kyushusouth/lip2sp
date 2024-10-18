@@ -665,9 +665,9 @@ class LitBaseHuBERT2Module(L.LightningModule):
 
         save_dir = (
             Path(
-                str(Path(self.cfg.training.checkpoints_save_dir)).replace(
-                    "checkpoints", "results_val"
-                )
+                str(Path(self.cfg.training.checkpoints_save_dir))
+                .replace("checkpoints", "results_val")
+                .replace("base_hubert_2", "base_hubert_2_val")
             )
             / speaker
             / filename
@@ -800,7 +800,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
     # def on_test_end(self) -> None:
     #     save_dir = Path(
     #         str(Path(self.cfg.training.checkpoints_save_dir)).replace(
-    #             "checkpoints", "results_val"
+    #             "checkpoints", "results"
     #         )
     #     )
 

@@ -24,20 +24,27 @@ def main(cfg: omegaconf.DictConfig) -> None:
     seed_everything(seed=cfg.training.seed)
 
     ckpt_path_lst = [
-        "/home/minami/lip2sp/checkpoints/base_hubert_2/20241007_023651/epoch:47-step:2400.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241006_222745/epoch:47-step:2400.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_134056/epoch:32-step:1650.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_150112/epoch:18-step:950.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_155146/epoch:17-step:900.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_164631/epoch:6-step:350.ckpt",
     ]
+    ckpt_path_lst_map = {
+        "20241006_222745": "20241014_101511",
+        "20241005_134056": "20241014_132545",
+        "20241005_150112": "20241014_133509",
+        "20241005_155146": "20241014_134443",
+        "20241005_164631": "20241014_135408",
+    }
     checkpoints_save_dir_orig = cfg.training.checkpoints_save_dir
 
     for ckpt_path in ckpt_path_lst:
         ckpt_path = Path(ckpt_path)
 
         cfg.training.checkpoints_save_dir = str(
-            Path(checkpoints_save_dir_orig).expanduser() / ckpt_path.parents[0].name
+            Path(checkpoints_save_dir_orig).expanduser()
+            / ckpt_path_lst_map[ckpt_path.parents[0].name]
         )
 
         datamodule = BaseHuBERT2DataModule(cfg)
