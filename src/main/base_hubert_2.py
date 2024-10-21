@@ -102,12 +102,6 @@ def main(cfg: omegaconf.DictConfig) -> None:
         ckpt_path="best",
     )
 
-    trainer.test(
-        model=model,
-        datamodule=datamodule,
-        ckpt_path=cfg.training.finetune_start_model_path,
-    )
-
     rename_checkpoint_file(cfg.training.checkpoints_save_dir)
 
     wandb.finish()
