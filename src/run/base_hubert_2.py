@@ -271,7 +271,7 @@ def main():
         for n_cluster in n_clusters_lst:
             if layer_index_cluster == 8 and n_cluster == 100:
                 hifigan_checkpoint_path_jvs_mel = None
-                hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241002_115640/epoch:15-step:20768.ckpt"
+                hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241014_042430/epoch:16-step:22066.ckpt"
             else:
                 hifigan_checkpoint_path_jvs_mel = None
                 hifigan_checkpoint_path_jvs_mel_speech_ssl = run_hifigan(

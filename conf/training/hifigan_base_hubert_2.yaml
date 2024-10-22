@@ -26,10 +26,10 @@ optimizer:
   learning_rate: 2.0e-4
   beta_1: 0.8
   beta_2: 0.99
-  weight_decay: 1.0e-2
+  weight_decay: 1.0e-5
 scheduler:
   type: exp
-  gamma: 0.9
+  gamma: 0.99
 wandb:
   project_name: "lip2sp-hifigan_base_hubert_2"
   default_root_dir: "./"
