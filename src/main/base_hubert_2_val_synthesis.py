@@ -24,18 +24,20 @@ def main(cfg: omegaconf.DictConfig) -> None:
     seed_everything(seed=cfg.training.seed)
 
     ckpt_path_lst = [
-        "/home/minami/lip2sp/checkpoints/base_hubert_2/20241006_222745/epoch:47-step:2400.ckpt",
+        # "/home/minami/lip2sp/checkpoints/base_hubert_2/20241007_003155/epoch:45-step:2300.ckpt",
+        # "/home/minami/lip2sp/checkpoints/base_hubert_2/20241004_233941/epoch:45-step:2300.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_134056/epoch:32-step:1650.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_150112/epoch:18-step:950.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_155146/epoch:17-step:900.ckpt",
         "/home/minami/lip2sp/checkpoints/base_hubert_2/20241005_164631/epoch:6-step:350.ckpt",
     ]
     ckpt_path_lst_map = {
-        "20241006_222745": "20241014_101511",
-        "20241005_134056": "20241014_132545",
-        "20241005_150112": "20241014_133509",
-        "20241005_155146": "20241014_134443",
-        "20241005_164631": "20241014_135408",
+        "20241007_003155": "20241023_151902",
+        "20241004_233941": "20241023_162612",
+        "20241005_134056": "20241023_173201",
+        "20241005_150112": "20241023_174120",
+        "20241005_155146": "20241023_175041",
+        "20241005_164631": "20241023_180001",
     }
     checkpoints_save_dir_orig = cfg.training.checkpoints_save_dir
 

@@ -45,11 +45,12 @@ def upload_directory_with_transfer_manager(
 
     # Filter so the list only includes files, not directories themselves.
     x = [
-        "20241014_101511",
-        "20241014_132545",
-        "20241014_133509",
-        "20241014_134443",
-        "20241014_135408",
+        "20241023_151902",
+        "20241023_162612",
+        "20241023_173201",
+        "20241023_174120",
+        "20241023_175041",
+        "20241023_180001",
     ]
     file_paths = [
         path for path in paths if path.is_file() and path.parents[2].name in x
