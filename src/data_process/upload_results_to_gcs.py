@@ -45,12 +45,12 @@ def upload_directory_with_transfer_manager(
 
     # Filter so the list only includes files, not directories themselves.
     x = [
-        "20241007_023651",
-        "20241005_134056",
-        "20241005_150112",
-        "20241005_155146",
-        "20241005_164631",
-        "20241006_222745",
+        "20241023_151902",
+        "20241023_162612",
+        "20241023_173201",
+        "20241023_174120",
+        "20241023_175041",
+        "20241023_180001",
     ]
     file_paths = [
         path for path in paths if path.is_file() and path.parents[2].name in x
@@ -84,7 +84,7 @@ def main():
     upload_directory_with_transfer_manager(
         project="subjective-evaluation-test",
         bucket_name="subjective-evaluation-test-2-original-data",
-        source_directory="/home/minami/lip2sp/results_val",
+        source_directory="/home/minami/lip2sp/results",
         workers=16,
     )
 
