@@ -84,23 +84,29 @@ def main(cfg: omegaconf.DictConfig) -> None:
         num_sanity_val_steps=0,
     )
 
-    if cfg.training.resume:
-        trainer.fit(
+    if cfg.training.is_only_synthesis:
+        trainer.test(
             model=model,
             datamodule=datamodule,
-            ckpt_path=cfg.training.resume_checkpoint_path,
+            ckpt_path=cfg.training.finetune_start_model_path,
         )
     else:
-        trainer.fit(
+        if cfg.training.resume:
+            trainer.fit(
+                model=model,
+                datamodule=datamodule,
+                ckpt_path=cfg.training.resume_checkpoint_path,
+            )
+        else:
+            trainer.fit(
+                model=model,
+                datamodule=datamodule,
+            )
+        trainer.test(
             model=model,
             datamodule=datamodule,
+            ckpt_path="best",
         )
-
-    trainer.test(
-        model=model,
-        datamodule=datamodule,
-        ckpt_path="best",
-    )
 
     rename_checkpoint_file(cfg.training.checkpoints_save_dir)
 

@@ -21,6 +21,7 @@ finetune: false
 finetune_start_model_path:
 resume: false
 resume_checkpoint_path: 
+is_only_synthesis: false
 loss_weights:
   mel_loss: 1.0
   ssl_conv_feature_loss: 1.0
