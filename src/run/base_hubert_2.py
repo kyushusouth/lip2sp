@@ -229,7 +229,7 @@ def run_ensemble(
 
 
 def main():
-    debug = False
+    debug = True
     if debug:
         hifigan_checkpoint_dir = Path(
             "~/lip2sp/checkpoints/debug_hifigan_base_hubert_2"
@@ -271,7 +271,7 @@ def main():
         for n_cluster in n_clusters_lst:
             if layer_index_cluster == 8 and n_cluster == 100:
                 hifigan_checkpoint_path_jvs_mel = None
-                hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241014_042430/epoch:16-step:22066.ckpt"
+                hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241023_060247/epoch:27-step:36344.ckpt"
             else:
                 hifigan_checkpoint_path_jvs_mel = None
                 hifigan_checkpoint_path_jvs_mel_speech_ssl = run_hifigan(

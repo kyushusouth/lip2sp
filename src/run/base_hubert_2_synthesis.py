@@ -322,7 +322,6 @@ def main():
     for layer_index_cluster in layer_index_cluster_lst:
         for n_cluster in n_clusters_lst:
             hifigan_checkpoint_path_jvs_mel = None
-            # hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241014_042430/epoch:16-step:22066.ckpt"
             hifigan_checkpoint_path_jvs_mel_speech_ssl = "/home/minami/lip2sp/checkpoints/hifigan_base_hubert_2/20241023_060247/epoch:27-step:36344.ckpt"
 
             for cluster_loss_weight in cluster_loss_weights:

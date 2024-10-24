@@ -102,6 +102,9 @@ praat-textgrids = "^1.4.0"
 pytest = "^8.3.2"
 polars = "^1.6.0"
 opencv-python = "^4.10.0.84"
+pykakasi = "^2.3.0"
+neologdn = "^0.5.3"
+num2words = "^0.5.13"
 
 
 [build-system]
