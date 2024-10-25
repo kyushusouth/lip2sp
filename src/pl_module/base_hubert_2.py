@@ -716,7 +716,7 @@ class LitBaseHuBERT2Module(L.LightningModule):
         utt_gt_len: int,
     ) -> None:
         delt = jiwer_result.deletions
-        inst = jiwer_result.deletions
+        inst = jiwer_result.insertions
         subst = jiwer_result.substitutions
         self.total_errors_dct[kind][error_type].deletions += delt
         self.total_errors_dct[kind][error_type].insertions += inst
