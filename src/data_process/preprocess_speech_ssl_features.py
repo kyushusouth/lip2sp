@@ -206,7 +206,7 @@ class Preprocessor:
 
             layer_feature = np.load(str(layer_feature_path))
             layer_feature_cluster = kmeans.predict(layer_feature)
-            layer_feature_cluster += 1
+            layer_feature_cluster += 1  # for padding index
             layer_feature_cluster_path.parent.mkdir(parents=True, exist_ok=True)
             np.save(str(layer_feature_cluster_path), layer_feature_cluster)
 
