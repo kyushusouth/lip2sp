@@ -5,12 +5,12 @@ import librosa
 import numpy as np
 import omegaconf
 import torch
-import torchvision
 from torch.utils.data import Dataset
 
 from src.data_process.utils import (
     get_upsample,
     get_upsample_speech_ssl,
+    load_video,
     wav2mel,
 )
 from src.dataset.utils import (
@@ -83,13 +83,27 @@ class BaseHuBERT2Dataset(Dataset):
         upsample_speech_ssl = get_upsample_speech_ssl(self.cfg)
 
         if video_path is not None:
-            lip, _, _ = torchvision.io.read_video(
-                str(video_path), pts_unit="sec", output_format="TCHW"
-            )  # (T, C, H, W)
-            lip = torchvision.transforms.functional.rgb_to_grayscale(lip)
+            lip = load_video(str(video_path))
+            if lip is None:
+                raise ValueError("Lip was None.")
+            lip = np.expand_dims(lip, 1)  # (T, 1, H, W)
+            # lip, _, _ = torchvision.io.read_video(
+            #     str(video_path), pts_unit="sec", output_format="TCHW"
+            # )  # (T, C, H, W)
+            # lip = torchvision.transforms.functional.rgb_to_grayscale(lip)
         else:
-            lip = torch.rand(int(feature.shape[1] * upsample), 1, 96, 96)
-        lip = lip.numpy()
+            lip = np.random.rand(
+                feature.shape[1] // upsample,
+                1,
+                self.cfg.data.video.imsize,
+                self.cfg.data.video.imsize,
+            )
+            # lip = torch.rand(feature.shape[1] // upsample, 1, 96, 96)
+        # lip = lip.numpy()
+
+        logger.debug(
+            f"Before adjusting sequence length: {lip.shape=}, {feature.shape=}, {hubert_conv_feature.shape=}, {hubert_layer_feature_cluster.shape=}"
+        )
 
         lip_len = min(
             int(lip.shape[0]),
@@ -135,7 +149,7 @@ class BaseHuBERT2Dataset(Dataset):
         feature = feature.to(torch.float32)
 
         logger.debug(
-            f"{lip.shape=}, {feature.shape=}, {hubert_conv_feature.shape=}, {hubert_layer_feature_cluster.shape=}"
+            f"After adjusting sequence length: {lip.shape=}, {feature.shape=}, {hubert_conv_feature.shape=}, {hubert_layer_feature_cluster.shape=}"
         )
 
         feature_len = torch.tensor(feature.shape[-1]).to(torch.int)

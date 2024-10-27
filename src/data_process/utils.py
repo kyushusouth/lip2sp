@@ -1,4 +1,5 @@
 import librosa
+import cv2
 import numpy as np
 import omegaconf
 from python_speech_features import logfbank
@@ -81,3 +82,26 @@ def wav2mel_avhubert(wav: np.ndarray, cfg: omegaconf.DictConfig) -> np.ndarray:
     ).T  # (C, T)
     feature = feature.astype(np.float32)
     return feature
+
+
+def load_video(path: str) -> np.ndarray | None:
+    """
+    AVHuBERTで用いられている動画読み込み用関数
+    """
+    for i in range(3):
+        try:
+            cap = cv2.VideoCapture(path)
+            frames = []
+            while True:
+                ret, frame = cap.read()
+                if ret:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    frames.append(frame)
+                else:
+                    break
+            return np.stack(frames)
+        except Exception:
+            print(f"failed loading {path} ({i} / 3)")
+            if i == 2:
+                raise ValueError(f"Unable to load {path}")
+    return None
