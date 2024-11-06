@@ -145,6 +145,9 @@ def run_hubert(
     speech_ssl_load_pretrained_weight: bool,
     lip2sp_checkpoint_dir: Path,
     finetune_start_model_path: Path,
+    is_finetuning: bool,
+    speech_ssl_input_type: str,
+    is_strict: bool,
     debug: bool,
 ) -> str:
     run_with_retry(
@@ -166,6 +169,7 @@ def run_hubert(
             f"model.decoder.speech_ssl.layer_index_cluster={layer_index_cluster}",
             f"model.decoder.speech_ssl.n_clusters={n_clusters}",
             f"model.decoder.speech_ssl.load_pretrained_weight={speech_ssl_load_pretrained_weight}",
+            f"model.decoder.speech_ssl.input.type={speech_ssl_input_type}",
             "training=base_hubert_2_debug" if debug else "training=base_hubert_2",
             "training.loss_weights.mel_loss=0.0",
             "training.loss_weights.ssl_conv_feature_loss=0.0",
@@ -174,9 +178,10 @@ def run_hubert(
             f"training.loss_weights.ssl_feature_cluster_speech_ssl_loss={cluster_loss_weight}",
             "training.loss_weights.mel_ensemble_loss=0.0",
             "training.loss_weights.ssl_feature_cluster_ensemble_loss=0.0",
-            "training.finetune=true",
+            f"training.finetune={is_finetuning}",
             f"training.finetune_start_model_path={str(finetune_start_model_path)}",
             "training.optimizer.learning_rate=5.0e-4",
+            f"training.is_strict={is_strict}",
         ],
         lip2sp_checkpoint_dir,
     )
@@ -267,6 +272,14 @@ def main():
     n_clusters_lst = [100]
     cluster_loss_weights = [0.0001, 0.001, 0.01, 0.1, 1.0]
 
+    avhubert_checkpoint_path_dct = {
+        0.0001: "/home/minami/lip2sp/checkpoints/base_hubert_2/20241027_191342/epoch:47-step:2400.ckpt",
+        0.001: "/home/minami/lip2sp/checkpoints/base_hubert_2/20241028_032925/epoch:45-step:2300.ckpt",
+        0.01: "/home/minami/lip2sp/checkpoints/base_hubert_2/20241028_113232/epoch:43-step:2200.ckpt",
+        0.1: "/home/minami/lip2sp/checkpoints/base_hubert_2/20241028_184008/epoch:25-step:1300.ckpt",
+        1.0: "/home/minami/lip2sp/checkpoints/base_hubert_2/20241031_204425/epoch:11-step:600.ckpt",
+    }
+
     for layer_index_cluster in layer_index_cluster_lst:
         for n_cluster in n_clusters_lst:
             if layer_index_cluster == 8 and n_cluster == 100:
@@ -283,57 +296,105 @@ def main():
                 )
 
             for cluster_loss_weight in cluster_loss_weights:
-                run_avhubert(
+                # input mel and ssl_feature_cluster
+                run_hubert(
                     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
                     hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
-                    freeze_pattern=freeze_patterns["train_avhubert"],
-                    ssl_conv_feature_loss_weight=0.0,
+                    freeze_pattern=freeze_patterns["train_hubert"],
                     cluster_loss_weight=cluster_loss_weight,
                     layer_index_cluster=layer_index_cluster,
                     n_clusters=n_cluster,
+                    partial_update_use=False,
+                    partial_update_lower_or_upper="",
+                    partial_udpate_thres=0,
+                    speech_ssl_load_pretrained_weight=False,
                     lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                    finetune_start_model_path=avhubert_checkpoint_path_dct[
+                        cluster_loss_weight
+                    ],
+                    is_finetuning=True,
+                    speech_ssl_input_type="mel_and_cluster",
+                    is_strict=False,
                     debug=debug,
                 )
 
-                avhubert_checkpoint_path = run_avhubert(
+                # e2e
+                run_hubert(
                     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
                     hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
-                    freeze_pattern=freeze_patterns["train_avhubert"],
-                    ssl_conv_feature_loss_weight=1.0,
+                    freeze_pattern=[
+                        "ensemble_encoder",
+                        "decoders_ensemble",
+                    ],
                     cluster_loss_weight=cluster_loss_weight,
                     layer_index_cluster=layer_index_cluster,
                     n_clusters=n_cluster,
+                    partial_update_use=False,
+                    partial_update_lower_or_upper="",
+                    partial_udpate_thres=0,
+                    speech_ssl_load_pretrained_weight=False,
                     lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                    finetune_start_model_path="",
+                    is_finetuning=False,
+                    speech_ssl_input_type="ssl_conv_feature",
+                    is_strict=True,
                     debug=debug,
                 )
 
-                for speech_ssl_load_pretrained_weight in [False, True]:
-                    hubert_checkpoint_path = run_hubert(
-                        hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
-                        hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
-                        freeze_pattern=freeze_patterns["train_hubert"],
-                        cluster_loss_weight=cluster_loss_weight,
-                        layer_index_cluster=layer_index_cluster,
-                        n_clusters=n_cluster,
-                        partial_update_use=False,
-                        partial_update_lower_or_upper="",
-                        partial_udpate_thres=0,
-                        speech_ssl_load_pretrained_weight=speech_ssl_load_pretrained_weight,
-                        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-                        finetune_start_model_path=avhubert_checkpoint_path,
-                        debug=debug,
-                    )
-                    run_ensemble(
-                        hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
-                        hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
-                        freeze_pattern=freeze_patterns["train_ensemble"],
-                        cluster_loss_weight=cluster_loss_weight,
-                        layer_index_cluster=layer_index_cluster,
-                        n_clusters=n_cluster,
-                        lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
-                        finetune_start_model_path=hubert_checkpoint_path,
-                        debug=debug,
-                    )
+                # run_avhubert(
+                #     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
+                #     hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
+                #     freeze_pattern=freeze_patterns["train_avhubert"],
+                #     ssl_conv_feature_loss_weight=0.0,
+                #     cluster_loss_weight=cluster_loss_weight,
+                #     layer_index_cluster=layer_index_cluster,
+                #     n_clusters=n_cluster,
+                #     lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                #     debug=debug,
+                # )
+
+                # avhubert_checkpoint_path = run_avhubert(
+                #     hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
+                #     hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
+                #     freeze_pattern=freeze_patterns["train_avhubert"],
+                #     ssl_conv_feature_loss_weight=1.0,
+                #     cluster_loss_weight=cluster_loss_weight,
+                #     layer_index_cluster=layer_index_cluster,
+                #     n_clusters=n_cluster,
+                #     lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                #     debug=debug,
+                # )
+
+                # for speech_ssl_load_pretrained_weight in [False, True]:
+                #     hubert_checkpoint_path = run_hubert(
+                #         hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
+                #         hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
+                #         freeze_pattern=freeze_patterns["train_hubert"],
+                #         cluster_loss_weight=cluster_loss_weight,
+                #         layer_index_cluster=layer_index_cluster,
+                #         n_clusters=n_cluster,
+                #         partial_update_use=False,
+                #         partial_update_lower_or_upper="",
+                #         partial_udpate_thres=0,
+                #         speech_ssl_load_pretrained_weight=speech_ssl_load_pretrained_weight,
+                #         lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                #         finetune_start_model_path=avhubert_checkpoint_path,
+                #         is_finetuning=True,
+                #         speech_ssl_input_type="ssl_conv_feature",
+                #         is_strict=True,
+                #         debug=debug,
+                #     )
+                #     run_ensemble(
+                #         hifigan_model_path_mel=hifigan_checkpoint_path_jvs_mel,
+                #         hifigan_model_path_mel_speech_ssl=hifigan_checkpoint_path_jvs_mel_speech_ssl,
+                #         freeze_pattern=freeze_patterns["train_ensemble"],
+                #         cluster_loss_weight=cluster_loss_weight,
+                #         layer_index_cluster=layer_index_cluster,
+                #         n_clusters=n_cluster,
+                #         lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                #         finetune_start_model_path=hubert_checkpoint_path,
+                #         debug=debug,
+                #     )
 
 
 if __name__ == "__main__":

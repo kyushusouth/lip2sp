@@ -31,7 +31,9 @@ def main(cfg: omegaconf.DictConfig) -> None:
 
     if cfg.training.finetune:
         model = LitBaseHuBERT2Module.load_from_checkpoint(
-            checkpoint_path=cfg.training.finetune_start_model_path, cfg=cfg
+            checkpoint_path=cfg.training.finetune_start_model_path,
+            strict=cfg.training.is_strict,
+            cfg=cfg,
         )
     else:
         model = LitBaseHuBERT2Module(cfg=cfg)

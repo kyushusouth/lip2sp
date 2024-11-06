@@ -340,6 +340,14 @@ class BaseHuBERT2Model(nn.Module):
 
         self.avhubert = load_avhubert(cfg)
         hidden_channels = self.avhubert.encoder_embed_dim
+
+        if cfg.model.decoder.speech_ssl.input.type == "mel_and_cluster":
+            self.emb_mel_and_cluster = nn.Linear(
+                cfg.model.decoder.speech_ssl.input.n_dim_mel
+                + cfg.model.decoder.speech_ssl.input.n_dim_ssl_feature_cluster,
+                cfg.model.decoder.speech_ssl.input.n_dim,
+            )
+
         self.ssl_model_encoder = SpeechSSLEncoder(cfg, hidden_channels)
         self.ensemble_encoder = EnsembleEncoder(cfg, hidden_channels)
 
@@ -426,9 +434,24 @@ class BaseHuBERT2Model(nn.Module):
             self.cfg.model.decoder.speech_ssl.n_clusters + 1,
         )
 
-        feature_speech_ssl = self.ssl_model_encoder(
-            pred_ssl_conv_feature, padding_mask_speech_ssl
-        )
+        if self.cfg.model.decoder.speech_ssl.input.type == "mel_and_cluster":
+            pred_mel_input = pred_mel.permute(0, 2, 1)
+            pred_mel_input = pred_mel_input.reshape(
+                pred_mel_input.shape[0], -1, int(self.cfg.data.audio.n_mels * 2)
+            )
+            pred_ssl_feature_cluster_input = pred_ssl_feature_cluster.permute(0, 2, 1)
+            pred_input = torch.cat(
+                [pred_mel_input, pred_ssl_feature_cluster_input], dim=2
+            )
+            pred_input = self.emb_mel_and_cluster(pred_input)
+            pred_input = pred_input.permute(0, 2, 1)
+            feature_speech_ssl = self.ssl_model_encoder(
+                pred_input, padding_mask_speech_ssl
+            )
+        elif self.cfg.model.decoder.speech_ssl.input.type == "ssl_conv_feature":
+            feature_speech_ssl = self.ssl_model_encoder(
+                pred_ssl_conv_feature, padding_mask_speech_ssl
+            )
 
         pred_mel_speech_ssl, pred_ssl_feature_cluster_speech_ssl = self.decoders_hubert(
             feature_speech_ssl, spk_emb

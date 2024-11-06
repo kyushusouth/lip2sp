@@ -37,6 +37,11 @@ speech_ssl:
   layer_index_cluster: 8
   ignore_index: 0
   freeze: false
+  input:
+    type: "ssl_conv_feature"
+    n_dim: 768
+    n_dim_mel: 160
+    n_dim_ssl_feature_cluster: 101
   partial_update:
     use: false
     lower_or_upper: "lower"
