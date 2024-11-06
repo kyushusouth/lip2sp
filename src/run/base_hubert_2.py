@@ -234,7 +234,7 @@ def run_ensemble(
 
 
 def main():
-    debug = True
+    debug = False
     if debug:
         hifigan_checkpoint_dir = Path(
             "~/lip2sp/checkpoints/debug_hifigan_base_hubert_2"
