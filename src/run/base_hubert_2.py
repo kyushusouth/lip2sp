@@ -100,6 +100,11 @@ def run_avhubert(
     layer_index_cluster: int,
     n_clusters: int,
     lip2sp_checkpoint_dir: Path,
+    is_finetuning: bool,
+    finetune_start_model_path: Path,
+    is_strict: bool,
+    is_only_synthesis: bool,
+    is_val_synthesis: bool,
     debug: bool,
 ) -> str:
     run_with_retry(
@@ -126,6 +131,11 @@ def run_avhubert(
             "training.loss_weights.mel_ensemble_loss=0.0",
             "training.loss_weights.ssl_feature_cluster_ensemble_loss=0.0",
             "training.finetune=false",
+            f"training.finetune={is_finetuning}",
+            f"training.finetune_start_model_path={str(finetune_start_model_path)}",
+            f"training.is_strict={is_strict}",
+            f"training.is_only_synthesis={is_only_synthesis}",
+            f"training.is_val_synthesis={is_val_synthesis}",
         ],
         lip2sp_checkpoint_dir,
     )
@@ -150,9 +160,10 @@ def run_hubert(
     speech_ssl_input_type: str,
     is_strict: bool,
     learning_rate: float,
+    is_only_synthesis: bool,
+    is_val_synthesis: bool,
     debug: bool,
 ) -> str:
-    5.0e-4
     run_with_retry(
         [
             "python",
@@ -185,6 +196,8 @@ def run_hubert(
             f"training.finetune_start_model_path={str(finetune_start_model_path)}",
             f"training.optimizer.learning_rate={learning_rate}",
             f"training.is_strict={is_strict}",
+            f"training.is_only_synthesis={is_only_synthesis}",
+            f"training.is_val_synthesis={is_val_synthesis}",
         ],
         lip2sp_checkpoint_dir,
     )
@@ -271,6 +284,11 @@ def main_experiments(
                     layer_index_cluster=layer_index_cluster,
                     n_clusters=n_cluster,
                     lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                    is_finetuning=False,
+                    finetune_start_model_path=Path(""),
+                    is_strict=True,
+                    is_only_synthesis=False,
+                    is_val_synthesis=False,
                     debug=debug,
                 )
                 avhubert_checkpoint_path = run_avhubert(
@@ -283,6 +301,11 @@ def main_experiments(
                     layer_index_cluster=layer_index_cluster,
                     n_clusters=n_cluster,
                     lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                    is_finetuning=False,
+                    finetune_start_model_path=Path(""),
+                    is_strict=True,
+                    is_only_synthesis=False,
+                    is_val_synthesis=False,
                     debug=debug,
                 )
                 for speech_ssl_load_pretrained_weight in [False, True]:
@@ -303,6 +326,8 @@ def main_experiments(
                         speech_ssl_input_type="ssl_conv_feature",
                         is_strict=True,
                         learning_rate=5.0e-4,
+                        is_only_synthesis=False,
+                        is_val_synthesis=False,
                         debug=debug,
                     )
                     run_ensemble(
@@ -371,6 +396,8 @@ def input_and_training_method_experiments(
                         speech_ssl_input_type="mel_and_cluster",
                         is_strict=False,
                         learning_rate=5.0e-4,
+                        is_only_synthesis=False,
+                        is_val_synthesis=False,
                         debug=debug,
                     )
 
@@ -392,6 +419,8 @@ def input_and_training_method_experiments(
                         speech_ssl_input_type="ssl_conv_feature",
                         is_strict=True,
                         learning_rate=5.0e-4,
+                        is_only_synthesis=False,
+                        is_val_synthesis=False,
                         debug=debug,
                     )
 
@@ -431,6 +460,11 @@ def networka_single_task_experiments(
                 layer_index_cluster=layer_index_cluster,
                 n_clusters=n_cluster,
                 lip2sp_checkpoint_dir=lip2sp_checkpoint_dir,
+                is_finetuning=False,
+                finetune_start_model_path=Path(""),
+                is_strict=True,
+                is_only_synthesis=False,
+                is_val_synthesis=False,
                 debug=debug,
             )
             for cluster_loss_weight in cluster_loss_weights:
@@ -451,6 +485,8 @@ def networka_single_task_experiments(
                     speech_ssl_input_type="ssl_conv_feature",
                     is_strict=True,
                     learning_rate=5.0e-4,
+                    is_only_synthesis=False,
+                    is_val_synthesis=False,
                     debug=debug,
                 )
 
@@ -500,6 +536,8 @@ def final_finetuning_experiments(
                     speech_ssl_input_type="ssl_conv_feature",
                     is_strict=True,
                     learning_rate=learning_rate,
+                    is_only_synthesis=False,
+                    is_val_synthesis=False,
                     debug=debug,
                 )
 

@@ -154,11 +154,20 @@ class BaseHuBERT2DataModule(L.LightningDataModule):
                 transform=BaseHuBERT2Transform(self.cfg, "val"),
             )
         if stage == "test":
-            self.test_dataset = BaseHuBERT2Dataset(
-                cfg=self.cfg,
-                data_path_list=test_data_path_list,
-                transform=BaseHuBERT2Transform(self.cfg, "test"),
-            )
+            if self.cfg.training.is_val_synthesis:
+                logger.info("use val_data_path_list for test")
+                self.test_dataset = BaseHuBERT2Dataset(
+                    cfg=self.cfg,
+                    data_path_list=val_data_path_list,
+                    transform=BaseHuBERT2Transform(self.cfg, "test"),
+                )
+            else:
+                logger.info("use test_data_path_list for test")
+                self.test_dataset = BaseHuBERT2Dataset(
+                    cfg=self.cfg,
+                    data_path_list=test_data_path_list,
+                    transform=BaseHuBERT2Transform(self.cfg, "test"),
+                )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(

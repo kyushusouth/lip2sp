@@ -87,10 +87,6 @@ class BaseHuBERT2Dataset(Dataset):
             if lip is None:
                 raise ValueError("Lip was None.")
             lip = np.expand_dims(lip, 1)  # (T, 1, H, W)
-            # lip, _, _ = torchvision.io.read_video(
-            #     str(video_path), pts_unit="sec", output_format="TCHW"
-            # )  # (T, C, H, W)
-            # lip = torchvision.transforms.functional.rgb_to_grayscale(lip)
         else:
             lip = np.random.rand(
                 feature.shape[1] // upsample,
@@ -98,8 +94,6 @@ class BaseHuBERT2Dataset(Dataset):
                 self.cfg.data.video.imsize,
                 self.cfg.data.video.imsize,
             )
-            # lip = torch.rand(feature.shape[1] // upsample, 1, 96, 96)
-        # lip = lip.numpy()
 
         logger.debug(
             f"Before adjusting sequence length: {lip.shape=}, {feature.shape=}, {hubert_conv_feature.shape=}, {hubert_layer_feature_cluster.shape=}"

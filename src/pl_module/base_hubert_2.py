@@ -8,7 +8,6 @@ import jiwer
 import lightning as L
 import MeCab
 import neologdn
-from num2words import num2words
 import numpy as np
 import omegaconf
 import pandas as pd
@@ -17,6 +16,7 @@ import pyopenjtalk
 import torch
 import whisper
 from cosine_annealing_warmup import CosineAnnealingWarmupRestarts
+from num2words import num2words
 from scipy.io.wavfile import write
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
@@ -649,7 +649,9 @@ class LitBaseHuBERT2Module(L.LightningModule):
         csv_path = Path(self.cfg.path.kablab.utt_csv_test_path).expanduser()
         self.df_utt = pd.read_csv(str(csv_path))
         self.df_utt = self.df_utt.drop(columns=["index"])
-        self.df_utt = self.df_utt.loc[self.df_utt["subset"] == "j"]
+        self.df_utt = self.df_utt.loc[
+            (self.df_utt["subset"] == "j") | (self.df_utt["subset"] == "i")
+        ]
 
         self.hifigan_mel_speech_ssl = LitHiFiGANBaseHuBERT2Model.load_from_checkpoint(
             self.cfg.model.hifigan.model_path_mel_speech_ssl,
@@ -669,6 +671,19 @@ class LitBaseHuBERT2Module(L.LightningModule):
         )
         self.speech_recognizer = whisper.load_model("large")
         self.mecab = MeCab.Tagger("-Owakati")
+
+        if self.cfg.training.is_val_synthesis:
+            self.save_dir = Path(
+                str(Path(self.cfg.training.checkpoints_save_dir)).replace(
+                    "checkpoints", "results_val"
+                )
+            )
+        else:
+            self.save_dir = Path(
+                str(Path(self.cfg.training.checkpoints_save_dir)).replace(
+                    "checkpoints", "results"
+                )
+            )
 
     def process_wav(self, wav: torch.Tensor, n_sample: int) -> torch.Tensor:
         wav = wav.to(torch.float32)
@@ -808,19 +823,10 @@ class LitBaseHuBERT2Module(L.LightningModule):
             len(utt_gt_phoneme_processed.split(" ")),
         )
 
-        save_dir = (
-            Path(
-                str(Path(self.cfg.training.checkpoints_save_dir)).replace(
-                    "checkpoints", "results"
-                )
-            )
-            / speaker
-            / filename
-        )
-        save_dir.mkdir(parents=True, exist_ok=True)
-
+        save_path = self.save_dir / speaker / filename / f"{kind}.wav"
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         write(
-            filename=str(save_dir / f"{kind}.wav"),
+            filename=str(save_path),
             rate=self.cfg.data.audio.sr,
             data=wav_eval.cpu().numpy(),
         )
@@ -960,23 +966,17 @@ class LitBaseHuBERT2Module(L.LightningModule):
         self.test_data_list += wandb_table_data
 
     def on_test_end(self) -> None:
-        save_dir = Path(
-            str(Path(self.cfg.training.checkpoints_save_dir)).replace(
-                "checkpoints", "results"
-            )
-        )
-
         subprocess.run(
             [
                 "/home/minami/Resemblyzer/.venv/bin/python",
                 "/home/minami/Resemblyzer/calc_cossim.py",
                 "--inp_dir",
-                str(save_dir),
+                str(self.save_dir),
                 "--out_path",
-                str(save_dir / "spk_sim.csv"),
+                str(self.save_dir / "spk_sim.csv"),
             ],
         )
-        df_spk_sim = pl.read_csv(str(save_dir / "spk_sim.csv"))
+        df_spk_sim = pl.read_csv(str(self.save_dir / "spk_sim.csv"))
         for i in range(len(self.test_data_list)):
             speaker = self.test_data_list[i][0]
             filename = self.test_data_list[i][1]
@@ -998,12 +998,12 @@ class LitBaseHuBERT2Module(L.LightningModule):
                 "--mode",
                 "predict_dir",
                 "--inp_dir",
-                str(save_dir),
+                str(self.save_dir),
                 "--out_path",
-                str(save_dir / "utmos.csv"),
+                str(self.save_dir / "utmos.csv"),
             ],
         )
-        df_utmos = pl.read_csv(str(save_dir / "utmos.csv"))
+        df_utmos = pl.read_csv(str(self.save_dir / "utmos.csv"))
         for i in range(len(self.test_data_list)):
             speaker = self.test_data_list[i][0]
             filename = self.test_data_list[i][1]

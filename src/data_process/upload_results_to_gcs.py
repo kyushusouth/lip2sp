@@ -45,6 +45,7 @@ def upload_directory_with_transfer_manager(
 
     # Filter so the list only includes files, not directories themselves.
     x = [
+        "20241028_013251",
         "20241028_200713",
         "20241109_201211",
     ]
@@ -77,6 +78,12 @@ def upload_directory_with_transfer_manager(
 
 
 def main():
+    upload_directory_with_transfer_manager(
+        project="subjective-evaluation-test",
+        bucket_name="subjective-evaluation-test-2-original-data",
+        source_directory="/home/minami/lip2sp/results_val",
+        workers=16,
+    )
     upload_directory_with_transfer_manager(
         project="subjective-evaluation-test",
         bucket_name="subjective-evaluation-test-2-original-data",
