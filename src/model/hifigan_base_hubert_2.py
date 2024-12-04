@@ -311,8 +311,17 @@ class DiscriminatorP(torch.nn.Module):
         )
         self.conv_post = norm_f(Conv2d(1024, 1, (3, 1), 1, padding=(1, 0)))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
+        """
+        args:
+            x: (B, 1, T)
+        returns:
+            x: (B, H*W)
+            fmap: [(B, C, H, W), ...]
+        """
         fmap = []
+
+        print(f"mpd, {self.period=}")
 
         # 1d to 2d
         b, c, t = x.shape
@@ -322,13 +331,18 @@ class DiscriminatorP(torch.nn.Module):
             t = t + n_pad
         x = x.view(b, c, t // self.period, self.period)
 
+        print(f"input={x.shape}")
+
         for l in self.convs:
             x = l(x)
             x = F.leaky_relu(x, LRELU_SLOPE)
+            print(f"fmap={x.shape}")
             fmap.append(x)
         x = self.conv_post(x)
         fmap.append(x)
         x = torch.flatten(x, 1, -1)
+
+        print(f"final_output={x.shape}")
 
         return x, fmap
 
@@ -346,7 +360,25 @@ class MultiPeriodDiscriminator(torch.nn.Module):
             ]
         )
 
-    def forward(self, y, y_hat):
+    def forward(
+        self, y: torch.Tensor, y_hat: torch.Tensor
+    ) -> tuple[
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[list[torch.Tensor]],
+        list[list[torch.Tensor]],
+    ]:
+        """
+        args:
+            y: (B, 1, T)
+            y_hat: (B, 1, T)
+        returns:
+            y_d_rs: [(B, D), ...]
+            y_d_gs: [(B, D), ...]
+            fmap_rs: [[(B, C, H, W), ...]]
+            fmap_gs: [[(B, C, H, W), ...]]
+        """
+        print(f"mpd_input={y.shape}")
         y_d_rs = []
         y_d_gs = []
         fmap_rs = []
@@ -379,15 +411,28 @@ class DiscriminatorS(torch.nn.Module):
         )
         self.conv_post = norm_f(Conv1d(1024, 1, 3, 1, padding=1))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
+        """
+        args:
+            x: (B, 1, T)
+        returns:
+            x: (B, T)
+            fmap: [(B, C, T), ...]
+        """
         fmap = []
+
+        print("msd")
+        print(f"input={x.shape}")
+
         for l in self.convs:
             x = l(x)
             x = F.leaky_relu(x, LRELU_SLOPE)
+            print(f"fmap={x.shape}")
             fmap.append(x)
         x = self.conv_post(x)
         fmap.append(x)
         x = torch.flatten(x, 1, -1)
+        print(f"final_output={x.shape}")
 
         return x, fmap
 
@@ -406,7 +451,25 @@ class MultiScaleDiscriminator(torch.nn.Module):
             [AvgPool1d(4, 2, padding=2), AvgPool1d(4, 2, padding=2)]
         )
 
-    def forward(self, y, y_hat):
+    def forward(
+        self, y: torch.Tensor, y_hat: torch.Tensor
+    ) -> tuple[
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[list[torch.Tensor]],
+        list[list[torch.Tensor]],
+    ]:
+        """
+        args:
+            y: (B, 1, T)
+            y_hat: (B, 1, T)
+        returns:
+            y_d_rs: [(B, T), ...]
+            y_d_gs: [(B, T), ...]
+            fmap_rs: [[(B, C, T), ...], ...]
+            fmap_gs: [[(B, C, T), ...], ...]
+        """
+        print(f"mpd_input={y.shape}")
         y_d_rs = []
         y_d_gs = []
         fmap_rs = []
