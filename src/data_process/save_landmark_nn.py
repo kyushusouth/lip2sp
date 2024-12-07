@@ -51,7 +51,7 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     fa = face_alignment.FaceAlignment(
-        face_alignment.LandmarksType._2D, device=device, flip_input=False
+        face_alignment.LandmarksType.TWO_D, device=device, flip_input=False
     )
 
     iter_cnt = 0
